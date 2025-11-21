@@ -22,7 +22,12 @@ export function ArticleCard({ post }: { post: Post }) {
       </CardHeader>
       <CardContent>
         <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          {new Date(post.publishedAt).toLocaleDateString()} • {post.readingTime} min read
+          {new Date(post.publishedAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          })}{' '}
+          • {post.readingTime} min read
         </p>
       </CardContent>
     </Card>

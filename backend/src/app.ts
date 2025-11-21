@@ -19,13 +19,14 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+
+app.get('/healthz', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
 app.use('/api', routes);
 
 app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
 
-app.use(errorHandler);
-
-app.get('/healthz', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
-
 process.on('uncaughtException', (err) => logger.error(`uncaughtException ${err.message}`));
-process.on('unhandledRejection', (err) => logger.error(`unhandledRejection ${(err as Error).message}`));
+process.on('unhandledRejection', (err) =>
+  logger.error(`unhandledRejection ${(err as Error).message}`)
+);
