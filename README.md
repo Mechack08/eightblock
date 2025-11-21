@@ -41,13 +41,13 @@ Requirements: Node.js 20+, pnpm 9+, PostgreSQL 15+, and OpenSSL for JWT signing.
    pnpm dev
    ```
 5. **Run the frontend**
+
    ```bash
    cd frontend
    pnpm dev
    ```
 
    ## Frontend (Next.js)
-
    - Located in `frontend/` with `app/`, `components/`, `lib/`, `styles/`, and MDX `content/`
    - TailwindCSS + ShadCN UI pre-configured (see `components.json`)
    - Contentlayer ingests MDX posts (run `pnpm --filter frontend dev` for hot reload)
@@ -55,7 +55,6 @@ Requirements: Node.js 20+, pnpm 9+, PostgreSQL 15+, and OpenSSL for JWT signing.
    - Sample article lives at `content/welcome-to-eightblock.mdx`
 
    ## Backend (Express API)
-
    - Located in `backend/` with `src/routes`, `controllers`, `middleware`, `utils`, and `prisma`
    - Run `pnpm --filter backend dev` to start the server on port 4000
    - Prisma schema models users, articles, comments, likes, tags, and subscriptions
@@ -87,6 +86,19 @@ Root scripts proxy to workspaces via pnpm:
 4. Submit a PR using the provided PR template; ensure all checks pass.
 
 Please read `CONTRIBUTING.md` and `CODE_OF_CONDUCT.md` for detailed expectations.
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
 
 ## License
 
