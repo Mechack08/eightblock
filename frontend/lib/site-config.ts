@@ -5,7 +5,7 @@ export const siteConfig = {
   ogImage: 'https://eightblock.dev/og.png',
   links: {
     twitter: 'https://x.com/eightblock',
-    github: 'https://github.com/eightblock-dev/eightblock',
+    github: 'https://github.com/Eightblockchain/eightblock',
   },
   categories: ['Cardano', 'Intersect', 'Blockchain', 'Governance', 'Development'],
 };
