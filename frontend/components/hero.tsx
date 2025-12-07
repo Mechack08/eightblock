@@ -1,26 +1,19 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export function Hero() {
-  return (
-    <section className="relative mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
-      {/* Cardano Logo */}
-      <div className="absolute right-8 top-8 h-24 w-24 opacity-20">
-        <svg viewBox="0 0 375 346" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="187.5" cy="173" r="4" fill="#080808" />
-          <circle cx="187.5" cy="20" r="4" fill="#080808" />
-          <circle cx="187.5" cy="326" r="4" fill="#080808" />
-          <circle cx="50" cy="97" r="4" fill="#080808" />
-          <circle cx="325" cy="97" r="4" fill="#080808" />
-          <circle cx="50" cy="249" r="4" fill="#080808" />
-          <circle cx="325" cy="249" r="4" fill="#080808" />
-          <circle cx="110" cy="50" r="4" fill="#080808" />
-          <circle cx="265" cy="50" r="4" fill="#080808" />
-          <circle cx="110" cy="296" r="4" fill="#080808" />
-          <circle cx="265" cy="296" r="4" fill="#080808" />
-        </svg>
-      </div>
+  const pathname = usePathname();
 
+  // Only show hero on home page
+  if (pathname !== '/') {
+    return null;
+  }
+
+  return (
+    <section className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
       <h1 className="max-w-2xl select-none text-5xl font-bold leading-tight tracking-tight text-[#080808] sm:text-6xl">
         Open Knowledge for the Cardano Developer Community
       </h1>

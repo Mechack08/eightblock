@@ -1,5 +1,4 @@
 import { allPosts } from 'contentlayer/generated';
-import { Hero } from '@/components/hero';
 import { ArticleCard } from '@/components/articles/article-card';
 
 export default function HomePage() {
@@ -11,8 +10,6 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Hero />
-
       {/* Featured Articles */}
       <section className="bg-gray-50 py-16">
         <div className="mx-auto max-w-6xl px-4">
