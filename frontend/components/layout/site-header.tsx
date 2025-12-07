@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
 import { Hero } from '../hero';
 
 // Dynamically import client components to reduce initial bundle
@@ -17,19 +18,40 @@ const LoginBtn = dynamic(() => import('../profile/LoginBtn'), {
 });
 
 export function SiteHeader() {
+  const [isSticky, setIsSticky] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsSticky(scrollPosition >= 24);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="bg-white/80 backdrop-blur pt-6">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-lg font-bold text-primary">
-          <Image src="/logo.svg" alt="eightblock logo" width={150} height={40} priority />
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-          <SearchComponent />
-          <LoginBtn />
-        </nav>
-      </div>
+    <>
+      <header
+        className={`bg-white/80 backdrop-blur pt-6 transition-all duration-200 ${
+          isSticky ? 'fixed top-0 left-0 right-0 z-50 pt-0 shadow-md' : ''
+        }`}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <Link href="/" className="text-lg font-bold text-primary">
+            <Image src="/logo.svg" alt="eightblock logo" width={150} height={40} priority />
+          </Link>
+          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+            <SearchComponent />
+            <LoginBtn />
+          </nav>
+        </div>
+      </header>
+
+      {/* Spacer to prevent content jump when header becomes fixed */}
+      {isSticky && <div className="h-[72px]" />}
 
       <Hero />
-    </header>
+    </>
   );
 }
