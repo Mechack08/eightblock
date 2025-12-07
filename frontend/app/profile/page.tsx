@@ -5,6 +5,7 @@ import { LogOut, Edit } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { userArticles } from '@/lib/mock-data';
 import { WalletCard } from '@/components/profile/WalletCard';
+import { StatsCard } from '@/components/profile/StatsCard';
 import { ArticleCard } from '@/components/profile/ArticleCard';
 import { EmptyState } from '@/components/profile/EmptyState';
 import { LoadingState } from '@/components/profile/LoadingState';
@@ -55,6 +56,12 @@ export default function ProfilePage() {
           copied={copied}
           onCopyAddress={copyAddress}
         />
+      </div>
+
+      {/* Stats Section */}
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-[#080808] mb-4">Your Stats</h2>
+        <StatsCard articles={userArticles} />
       </div>
 
       {/* Articles Section */}
