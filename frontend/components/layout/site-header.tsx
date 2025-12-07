@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import { siteConfig } from '@/lib/site-config';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
+import SearchComponent from '../search/Search';
 
 const navItems = [
   { href: '/', label: 'Home' },
@@ -15,14 +17,19 @@ export function SiteHeader() {
     <header className="border-b bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Link href="/" className="text-lg font-bold text-primary">
-          {siteConfig.name}
+          <Image src="/logo.svg" alt="eightblock logo" width={150} height={40} priority />
         </Link>
         <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="text-muted-foreground hover:text-primary">
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-muted-foreground hover:text-primary"
+            >
               {item.label}
             </Link>
           ))}
+          <SearchComponent />
         </nav>
         <Link
           href={siteConfig.links.github}

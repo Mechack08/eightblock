@@ -19,6 +19,7 @@
       "@/lib/*": ["lib/*"],
       "@/content/*": ["content/*"],
       "@/styles/*": ["styles/*"],
+      "@/hooks/*": ["hooks/*"],
       "contentlayer/generated": ["./.contentlayer/generated"]
     },
     "esModuleInterop": true,
