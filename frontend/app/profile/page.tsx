@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/lib/wallet-context';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Loader2, User, Save } from 'lucide-react';
+import { Loader2, User, Save, Upload, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { WalletCard } from '@/components/profile/WalletCard';
 import { StatsCard } from '@/components/profile/StatsCard';
 import { LoadingState } from '@/components/profile/LoadingState';
+import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -29,11 +30,15 @@ export default function ProfilePage() {
   const { connected, connecting, address, wallet } = useWallet();
   const router = useRouter();
   const toast = useToast?.() || { toast: () => {} };
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [stats, setStats] = useState({
     views: 0,
     uniqueViews: 0,
@@ -46,7 +51,6 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
-    avatarUrl: '',
   });
 
   useEffect(() => {
@@ -78,8 +82,15 @@ export default function ProfilePage() {
       setFormData({
         name: data.name || '',
         bio: data.bio || '',
-        avatarUrl: data.avatarUrl || '',
       });
+      // Set avatar preview from server
+      if (data.avatarUrl) {
+        setAvatarPreview(
+          data.avatarUrl.startsWith('http')
+            ? data.avatarUrl
+            : `${API_URL.replace('/api', '')}${data.avatarUrl}`
+        );
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast.toast?.({
@@ -134,6 +145,100 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.toast?.({
+        title: 'Invalid file type',
+        description: 'Please select a JPEG, PNG, WebP, or GIF image',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      toast.toast?.({
+        title: 'File too large',
+        description: 'Please select an image smaller than 10MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadAvatar = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const formData = new FormData();
+      formData.append('avatar', selectedFile);
+
+      const response = await fetch(`${API_URL}/users/me/avatar`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Failed to upload avatar');
+
+      const data = await response.json();
+      setProfile(data.user);
+      setSelectedFile(null);
+
+      // Update preview with server URL
+      const avatarUrl = data.user.avatarUrl.startsWith('http')
+        ? data.user.avatarUrl
+        : `${API_URL.replace('/api', '')}${data.user.avatarUrl}`;
+      setAvatarPreview(avatarUrl);
+
+      toast.toast?.({
+        title: 'Avatar updated!',
+        description: `Image optimized to ${Math.round(data.avatar.size / 1024)}KB`,
+      });
+    } catch (error) {
+      console.error('Error uploading avatar:', error);
+      toast.toast?.({
+        title: 'Upload failed',
+        description: 'Failed to upload avatar. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setSelectedFile(null);
+    setAvatarPreview(
+      profile?.avatarUrl
+        ? profile.avatarUrl.startsWith('http')
+          ? profile.avatarUrl
+          : `${API_URL.replace('/api', '')}${profile.avatarUrl}`
+        : null
+    );
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -252,23 +357,99 @@ export default function ProfilePage() {
             </p>
           </div>
 
+          {/* Avatar Upload Section */}
           <div className="space-y-2">
-            <Label htmlFor="avatarUrl">Avatar URL</Label>
-            <Input
-              id="avatarUrl"
-              type="url"
-              placeholder="https://example.com/avatar.jpg"
-              value={formData.avatarUrl}
-              onChange={(e) => setFormData({ ...formData, avatarUrl: e.target.value })}
-              disabled={saving}
-            />
-            <p className="text-sm text-gray-500">Link to your profile picture</p>
+            <Label>Profile Avatar</Label>
+            <div className="flex items-start gap-4">
+              {/* Avatar Preview */}
+              <div className="flex-shrink-0">
+                <div className="relative h-24 w-24 rounded-full overflow-hidden bg-gray-100 border-2 border-gray-200">
+                  {avatarPreview ? (
+                    <Image src={avatarPreview} alt="Avatar preview" fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full w-full">
+                      <User className="h-12 w-12 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Upload Controls */}
+              <div className="flex-1 space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  disabled={uploading}
+                />
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || saving}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    Choose Image
+                  </Button>
+
+                  {selectedFile && (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleUploadAvatar}
+                        disabled={uploading || saving}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {uploading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveAvatar}
+                        disabled={uploading || saving}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-500">
+                  Upload a profile picture. JPEG, PNG, WebP, or GIF. Max 10MB.
+                  <br />
+                  Image will be automatically optimized and resized to 400x400px.
+                </p>
+
+                {selectedFile && (
+                  <p className="text-sm text-blue-600">
+                    Selected: {selectedFile.name} ({Math.round(selectedFile.size / 1024)}KB)
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
             <Button
               type="submit"
-              disabled={saving}
+              disabled={saving || uploading}
               className="bg-[#080808] hover:bg-gray-800 text-white"
             >
               {saving ? (
@@ -290,8 +471,8 @@ export default function ProfilePage() {
                 setFormData({
                   name: profile.name || '',
                   bio: profile.bio || '',
-                  avatarUrl: profile.avatarUrl || '',
                 });
+                handleRemoveAvatar();
               }}
               disabled={saving}
             >

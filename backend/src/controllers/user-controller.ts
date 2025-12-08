@@ -1,6 +1,9 @@
 import type { Request, Response } from 'express';
 import { prisma } from '@/prisma/client';
 import { logger } from '@/utils/logger';
+import { optimizeImage, deleteImage, getExtensionForFormat } from '@/utils/image-optimizer';
+import path from 'path';
+import fs from 'fs';
 
 /**
  * Get user by wallet address
@@ -177,5 +180,86 @@ export async function updateMyProfile(req: Request, res: Response) {
   } catch (error) {
     logger.error(`updateMyProfile: ${(error as Error).message}`);
     return res.status(500).json({ error: 'Failed to update profile' });
+  }
+}
+
+/**
+ * Upload and update user avatar
+ */
+export async function uploadAvatar(req: Request, res: Response) {
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  try {
+    // Get current user to delete old avatar if exists
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    // Optimize the uploaded image
+    const uploadedPath = req.file.path;
+    const fileName = path.basename(uploadedPath, path.extname(uploadedPath));
+    const outputPath = path.join(
+      path.dirname(uploadedPath),
+      `${fileName}${getExtensionForFormat('webp')}`
+    );
+
+    const optimizedImage = await optimizeImage(uploadedPath, outputPath, {
+      width: 400,
+      height: 400,
+      quality: 85,
+      format: 'webp',
+    });
+
+    // Generate avatar URL (relative path from backend)
+    const avatarUrl = `/uploads/avatars/${path.basename(optimizedImage.path)}`;
+
+    // Update user profile with new avatar URL
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+      include: {
+        _count: {
+          select: {
+            articles: true,
+            likes: true,
+            comments: true,
+          },
+        },
+      },
+    });
+
+    // Delete old avatar file if it exists
+    if (currentUser?.avatarUrl && currentUser.avatarUrl.startsWith('/uploads/avatars/')) {
+      const oldFilePath = path.join(process.cwd(), currentUser.avatarUrl.replace(/^\//, ''));
+      deleteImage(oldFilePath);
+    }
+
+    logger.info(`Avatar uploaded for user ${userId}: ${avatarUrl}`);
+
+    return res.json({
+      user: updatedUser,
+      avatar: {
+        url: avatarUrl,
+        size: optimizedImage.size,
+        width: optimizedImage.width,
+        height: optimizedImage.height,
+      },
+    });
+  } catch (error) {
+    logger.error(`uploadAvatar: ${(error as Error).message}`);
+    // Clean up uploaded file on error
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    return res.status(500).json({ error: 'Failed to upload avatar' });
   }
 }
