@@ -27,7 +27,7 @@ router.get('/', listArticles);
 router.get('/wallet/:walletAddress', getArticlesByWallet);
 router.get('/:slug', getArticle);
 router.post('/', requireAuth, validateBody(articleSchema), createArticle);
-router.put('/:id', requireAuth, updateArticle);
+router.put('/:id', requireAuth, validateBody(articleSchema.partial()), updateArticle);
 router.delete('/:id', requireAuth, deleteArticle);
 
 export default router;

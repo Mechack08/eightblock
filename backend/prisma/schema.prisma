@@ -24,25 +24,26 @@ model User {
 }
 
 model Article {
-  id          String       @id @default(cuid())
-  title       String
-  slug        String       @unique
-  description String
-  content     String
-  category    String
-  tags        TagOnArticle[]
-  author      User         @relation(fields: [authorId], references: [id])
-  authorId    String
-  likes       Like[]
-  comments    Comment[]
-  views       ArticleView[]
-  viewCount   Int          @default(0)
-  uniqueViews Int          @default(0)
-  publishedAt DateTime     @default(now())
-  status      ArticleStatus @default(DRAFT)
-  featured    Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  title         String
+  slug          String       @unique
+  description   String
+  content       String
+  category      String
+  featuredImage String?
+  tags          TagOnArticle[]
+  author        User         @relation(fields: [authorId], references: [id])
+  authorId      String
+  likes         Like[]
+  comments      Comment[]
+  views         ArticleView[]
+  viewCount     Int          @default(0)
+  uniqueViews   Int          @default(0)
+  publishedAt   DateTime     @default(now())
+  status        ArticleStatus @default(DRAFT)
+  featured      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   @@index([viewCount])
   @@index([uniqueViews])

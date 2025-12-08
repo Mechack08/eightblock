@@ -233,6 +233,7 @@ export async function createArticle(req: Request, res: Response) {
         description: excerpt || '', // Map excerpt to description
         content,
         category: tags[0] || 'General', // Use first tag as category or default to 'General'
+        featuredImage: featuredImage || undefined,
         status,
         // publishedAt will use default value from schema (@default(now()))
         author: {
@@ -273,7 +274,7 @@ export async function updateArticle(req: Request, res: Response) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const { title, slug, excerpt, content, tags = [], status } = req.body;
+  const { title, slug, excerpt, content, tags = [], featuredImage, status } = req.body;
 
   try {
     // Check if article exists and user is the author
@@ -318,6 +319,7 @@ export async function updateArticle(req: Request, res: Response) {
         description: excerpt || '',
         content,
         category: tags[0] || existingArticle.category,
+        featuredImage: featuredImage !== undefined ? featuredImage : existingArticle.featuredImage,
         status,
         tags: {
           deleteMany: {},
