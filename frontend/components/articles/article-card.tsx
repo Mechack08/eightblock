@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Post } from 'contentlayer/generated';
 import { Card } from '@/components/ui/card';
+import { Avatar } from '@/components/ui/avatar';
 
 export function ArticleCard({ post }: { post: Post }) {
   return (
@@ -20,16 +21,25 @@ export function ArticleCard({ post }: { post: Post }) {
           </p>
           <h3 className="text-xl font-bold text-[#080808] group-hover:underline">{post.title}</h3>
           <p className="line-clamp-2 text-sm text-gray-600">{post.description}</p>
-          <p className="text-xs text-gray-500">
-            {typeof post.author === 'object' && post.author?.name ? post.author.name : post.author}{' '}
-            ·{' '}
-            {new Date(post.publishedAt).toLocaleDateString('en-US', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })}{' '}
-            · {post.readingTime} min read
-          </p>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Avatar
+              src={typeof post.author === 'object' ? post.author?.avatarUrl : null}
+              name={typeof post.author === 'object' ? post.author?.name : post.author}
+              size="xs"
+            />
+            <span>
+              {typeof post.author === 'object' && post.author?.name
+                ? post.author.name
+                : post.author}{' '}
+              ·{' '}
+              {new Date(post.publishedAt).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+              })}{' '}
+              · {post.readingTime} min read
+            </span>
+          </div>
         </div>
       </Card>
     </Link>

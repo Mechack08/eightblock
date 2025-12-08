@@ -1,18 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/lib/wallet-context';
 import { Button } from '../ui/button';
+import { Avatar } from '../ui/avatar';
 import { ChevronDown, LogOut, User, Wallet, Bookmark, FileText } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function LoginBtn() {
   const { connected, connecting, address, connect, disconnect, availableWallets } = useWallet();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showWalletSelect, setShowWalletSelect] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    name: string | null;
+    avatarUrl: string | null;
+  } | null>(null);
 
   const truncateAddress = (addr: string) => {
     return `${addr.slice(0, 8)}...${addr.slice(-8)}`;
+  };
+
+  useEffect(() => {
+    if (connected && address) {
+      fetchUserProfile();
+    }
+  }, [connected, address]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserProfile({ name: data.name, avatarUrl: data.avatarUrl });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
   };
 
   const handleWalletSelect = async (walletName: string) => {
@@ -27,8 +60,8 @@ export default function LoginBtn() {
           onClick={() => setShowProfileMenu(!showProfileMenu)}
           className="bg-[#080808] px-4 text-base hover:bg-[#080808]/90 rounded-[2px] flex items-center gap-2"
         >
-          <User className="h-4 w-4" />
-          {truncateAddress(address)}
+          <Avatar src={userProfile?.avatarUrl} name={userProfile?.name} size="xs" />
+          {userProfile?.name || truncateAddress(address)}
           <ChevronDown className="h-4 w-4" />
         </Button>
 

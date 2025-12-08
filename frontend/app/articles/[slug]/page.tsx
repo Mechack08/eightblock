@@ -5,6 +5,7 @@ import { notFound, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar } from '@/components/ui/avatar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +74,7 @@ interface Article {
     walletAddress: string;
     name: string | null;
     bio?: string | null;
+    avatarUrl?: string | null;
   };
   tags: Array<{
     tag: {
@@ -487,8 +489,8 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
 
             {/* Meta Info */}
             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-              <div className="flex items-center gap-1.5">
-                <User className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                <Avatar src={article.author.avatarUrl} name={article.author.name} size="sm" />
                 <span>{article.author.name || 'Anonymous'}</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -599,9 +601,11 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
         <div className="mx-auto max-w-4xl px-4 py-8">
           <h3 className="mb-4 text-lg font-semibold text-gray-900">About the Author</h3>
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold">
-              {(article.author.name || 'A')[0].toUpperCase()}
-            </div>
+            <Avatar
+              src={article.author.avatarUrl}
+              alt={article.author.name || 'Author'}
+              size="lg"
+            />
             <div className="flex-1">
               <p className="font-semibold text-gray-900">
                 {article.author.name || 'Anonymous Author'}
@@ -690,9 +694,11 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
                         className="rounded-lg border border-gray-200 bg-white p-4 hover:shadow-sm transition-shadow"
                       >
                         <div className="flex items-start gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white font-semibold text-sm flex-shrink-0">
-                            {(comment.author.name || 'A')[0].toUpperCase()}
-                          </div>
+                          <Avatar
+                            src={comment.author.avatarUrl}
+                            name={comment.author.name}
+                            size="md"
+                          />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
                               <div className="flex items-center gap-2 min-w-0">
