@@ -2,13 +2,27 @@
 
 import { ArticleCard } from '@/components/articles/article-card';
 import { useInfiniteArticles, Article } from '@/hooks/useInfiniteArticles';
-import { useEffect, useRef } from 'react';
+import { useFeaturedArticles } from '@/hooks/useFeaturedArticles';
+import { useEffect, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { ArrowUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Hero } from '@/components/hero';
 
 export default function HomePage() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useInfiniteArticles(10);
+  const { data: featuredArticles, isLoading: featuredLoading } = useFeaturedArticles();
 
   const observerTarget = useRef<HTMLDivElement>(null);
+  const articlesRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Flatten all pages into a single array of articles
+  const allArticles = data?.pages.flatMap((page) => page.articles) ?? [];
+  const featured = featuredArticles ?? [];
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -33,9 +47,51 @@ export default function HomePage() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Flatten all pages into a single array of articles
-  const allArticles = data?.pages.flatMap((page) => page.articles) ?? [];
-  const featured = allArticles.filter((article) => article.featured).slice(0, 3);
+  // Show/hide scroll to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Update carousel scroll buttons visibility
+  const updateCarouselButtons = () => {
+    const carousel = carouselRef.current;
+    if (carousel) {
+      setCanScrollLeft(carousel.scrollLeft > 0);
+      setCanScrollRight(carousel.scrollLeft < carousel.scrollWidth - carousel.clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (carousel) {
+      updateCarouselButtons();
+      carousel.addEventListener('scroll', updateCarouselButtons);
+      return () => carousel.removeEventListener('scroll', updateCarouselButtons);
+    }
+  }, [featured]);
+
+  const scrollToArticles = () => {
+    articlesRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollCarousel = (direction: 'left' | 'right') => {
+    const carousel = carouselRef.current;
+    if (carousel) {
+      const scrollAmount = carousel.clientWidth * 0.8;
+      carousel.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -58,30 +114,105 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Featured Articles - Only show if featured articles exist */}
-      {featured.length > 0 && (
+      {/* Hero Section */}
+      <Hero onScrollToArticles={scrollToArticles} />
+
+      {/* Featured Articles Carousel - Only show if more than 3 featured articles */}
+      {!featuredLoading && featured.length > 0 && (
         <section className="bg-gray-50 py-16">
           <div className="mx-auto max-w-6xl px-4">
             <h2 className="mb-8 text-2xl font-bold text-[#080808]">Featured Articles</h2>
-            <div className="grid gap-8 md:grid-cols-3">
-              {featured.map((article) => (
-                <ArticleCard
-                  key={article.slug}
-                  post={
-                    {
-                      ...article,
-                      readingTime: Math.ceil(article.content.split(' ').length / 200),
-                    } as any
-                  }
-                />
-              ))}
-            </div>
+
+            {featured.length <= 3 ? (
+              <div className="grid gap-8 md:grid-cols-3">
+                {featured.map((article) => (
+                  <ArticleCard
+                    key={article.slug}
+                    post={
+                      {
+                        ...article,
+                        readingTime: Math.ceil(article.content.split(' ').length / 200),
+                      } as any
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="relative">
+                {/* Carousel Navigation Buttons */}
+                {canScrollLeft && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
+                    onClick={() => scrollCarousel('left')}
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </Button>
+                )}
+                {canScrollRight && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
+                    onClick={() => scrollCarousel('right')}
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </Button>
+                )}
+
+                {/* Scrollable Carousel */}
+                <div
+                  ref={carouselRef}
+                  className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+                  style={{
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  }}
+                >
+                  {featured.map((article) => (
+                    <div
+                      key={article.slug}
+                      className="flex-none w-full md:w-[calc(33.333%-1rem)] snap-start"
+                      draggable="true"
+                      onDragStart={(e) => {
+                        const carousel = carouselRef.current;
+                        if (carousel) {
+                          const startX = e.clientX;
+                          const scrollLeft = carousel.scrollLeft;
+                          const handleDrag = (moveEvent: MouseEvent) => {
+                            const x = moveEvent.clientX;
+                            const walk = (startX - x) * 2;
+                            carousel.scrollLeft = scrollLeft + walk;
+                          };
+                          const handleDragEnd = () => {
+                            document.removeEventListener('mousemove', handleDrag);
+                            document.removeEventListener('mouseup', handleDragEnd);
+                          };
+                          document.addEventListener('mousemove', handleDrag);
+                          document.addEventListener('mouseup', handleDragEnd);
+                        }
+                      }}
+                    >
+                      <ArticleCard
+                        post={
+                          {
+                            ...article,
+                            readingTime: Math.ceil(article.content.split(' ').length / 200),
+                          } as any
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* Explore Articles with Infinite Scroll */}
-      <section className="py-16">
+      <section ref={articlesRef} className="py-16" id="articles">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="mb-8 text-2xl font-bold text-[#080808]">Explore Articles</h2>
           {allArticles.length === 0 ? (
@@ -129,6 +260,17 @@ export default function HomePage() {
           )}
         </div>
       </section>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <Button
+          onClick={scrollToTop}
+          size="icon"
+          className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full bg-[#080808] shadow-lg hover:bg-gray-800 transition-all duration-300"
+        >
+          <ArrowUp className="h-5 w-5" />
+        </Button>
+      )}
     </div>
   );
 }

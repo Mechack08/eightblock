@@ -26,3 +26,13 @@ body {
 .prose p {
   @apply leading-7 text-muted-foreground;
 }
+
+/* Hide scrollbar for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
