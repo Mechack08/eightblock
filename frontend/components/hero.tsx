@@ -1,23 +1,38 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export function Hero() {
+  const pathname = usePathname();
+
+  // Only show hero on home page
+  if (pathname !== '/') {
+    return null;
+  }
+
   return (
-    <section className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-16 text-center">
-      <p className="text-sm font-semibold uppercase tracking-wide text-primary/80">Cardano Education</p>
-      <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-        Learn, build, and govern the Cardano ecosystem together.
+    <section className="mx-auto flex max-w-4xl flex-col items-center gap-6 px-4 py-20 text-center">
+      <h1 className="max-w-2xl select-none text-5xl font-bold leading-tight tracking-tight text-[#080808] sm:text-6xl">
+        Open Knowledge for the Cardano Developer Community
       </h1>
-      <p className="text-lg text-muted-foreground">
-        eightblock is a community-driven publication for blockchain builders, Intersect members, and
-        the broader web3 world. Read deep dives, ship tutorials, and collaborate on open knowledge.
+      <p className="max-w-xl select-none text-base text-gray-600">
+        A technical blog for Cardano developers, focusing on open-source culture and developer
+        collaboration. All content is community-driven and open for contribution.
       </p>
-      <div className="flex flex-col justify-center gap-3 sm:flex-row">
-        <Button asChild>
-          <Link href="/articles">Explore Articles</Link>
+      <div className="mt-2 flex flex-col justify-center gap-4 sm:flex-row">
+        <Button asChild className="bg-[#080808] px-8 py-6 text-base hover:bg-[#080808]/90">
+          <Link href="/articles">Read Articles</Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href="/newsletter">Join Newsletter</Link>
+        <Button
+          variant="outline"
+          asChild
+          className="border-[#080808] px-8 py-6 text-base text-[#080808] hover:bg-gray-50"
+        >
+          <Link href="https://github.com/Mechack08/eightblock" target="_blank">
+            Contribute on GitHub
+          </Link>
         </Button>
       </div>
     </section>

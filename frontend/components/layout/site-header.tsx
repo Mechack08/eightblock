@@ -1,37 +1,57 @@
-import Link from 'next/link';
-import { buttonVariants } from '@/components/ui/button';
-import { siteConfig } from '@/lib/site-config';
-import { cn } from '@/lib/utils';
+'use client';
 
-const navItems = [
-  { href: '/', label: 'Home' },
-  { href: '/articles', label: 'Articles' },
-  { href: '/admin', label: 'Admin' },
-  { href: '/newsletter', label: 'Newsletter' },
-];
+import Link from 'next/link';
+import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
+import { Hero } from '../hero';
+
+// Dynamically import client components to reduce initial bundle
+const SearchComponent = dynamic(() => import('../search/Search'), {
+  ssr: false,
+  loading: () => <div className="w-5 h-5" />,
+});
+
+const LoginBtn = dynamic(() => import('../profile/LoginBtn'), {
+  ssr: false,
+  loading: () => <div className="h-10 w-32 bg-gray-200 animate-pulse rounded" />,
+});
 
 export function SiteHeader() {
+  const [isSticky, setIsSticky] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsSticky(scrollPosition >= 24);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <header className="border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-lg font-bold text-primary">
-          {siteConfig.name}
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
-          {navItems.map((item) => (
-            <Link key={item.href} href={item.href} className="text-muted-foreground hover:text-primary">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <Link
-          href={siteConfig.links.github}
-          className={cn(buttonVariants({ variant: 'secondary', size: 'sm' }))}
-          target="_blank"
-        >
-          Contribute
-        </Link>
-      </div>
-    </header>
+    <>
+      <header
+        className={`bg-white/80 backdrop-blur pt-6 transition-all duration-200 ${
+          isSticky ? 'fixed top-0 left-0 right-0 z-50 pt-0 shadow-md' : ''
+        }`}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+          <Link href="/" className="text-lg font-bold text-primary">
+            <Image src="/logo.svg" alt="eightblock logo" width={150} height={40} priority />
+          </Link>
+          <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+            <SearchComponent />
+            <LoginBtn />
+          </nav>
+        </div>
+      </header>
+
+      {/* Spacer to prevent content jump when header becomes fixed */}
+      {isSticky && <div className="h-[72px]" />}
+
+      <Hero />
+    </>
   );
 }
