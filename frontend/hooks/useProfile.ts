@@ -73,6 +73,20 @@ export function useProfile() {
     router.push('/');
   };
 
+  const refreshArticles = async () => {
+    if (address) {
+      setLoading(true);
+      try {
+        const userArticles = await getArticlesByWallet(address);
+        setArticles(userArticles);
+      } catch (error) {
+        console.error('Failed to refresh articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   // Calculate stats
   const publishedArticles = articles.filter((a) => a.status === 'PUBLISHED');
   const draftArticles = articles.filter((a) => a.status === 'DRAFT');
@@ -97,5 +111,6 @@ export function useProfile() {
     },
     copyAddress,
     handleDisconnect,
+    refreshArticles,
   };
 }

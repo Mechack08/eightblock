@@ -22,6 +22,7 @@ export default function ProfilePage() {
     stats,
     copyAddress,
     handleDisconnect,
+    refreshArticles,
   } = useProfile();
 
   // Show loading state while checking wallet connection
@@ -85,7 +86,7 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-4">
             {articles.map((article) => (
-              <ArticleCard key={article.id} article={article} />
+              <ArticleCard key={article.id} article={article} onDelete={refreshArticles} />
             ))}
           </div>
         )}

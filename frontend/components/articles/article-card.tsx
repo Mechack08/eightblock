@@ -21,7 +21,8 @@ export function ArticleCard({ post }: { post: Post }) {
           <h3 className="text-xl font-bold text-[#080808] group-hover:underline">{post.title}</h3>
           <p className="line-clamp-2 text-sm text-gray-600">{post.description}</p>
           <p className="text-xs text-gray-500">
-            {post.author} ·{' '}
+            {typeof post.author === 'object' && post.author?.name ? post.author.name : post.author}{' '}
+            ·{' '}
             {new Date(post.publishedAt).toLocaleDateString('en-US', {
               day: 'numeric',
               month: 'short',
