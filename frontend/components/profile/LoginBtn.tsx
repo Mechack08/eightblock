@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useWallet } from '@/lib/wallet-context';
 import { Button } from '../ui/button';
 import { Avatar } from '../ui/avatar';
-import { ChevronDown, LogOut, User, Wallet, Bookmark, FileText } from 'lucide-react';
+import { ChevronDown, LogOut, User, Wallet, Bookmark, FileText, PlusCircle } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -83,6 +83,14 @@ export default function LoginBtn() {
               >
                 <FileText className="h-4 w-4" />
                 My Articles
+              </Link>
+              <Link
+                href="/articles/new"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowProfileMenu(false)}
+              >
+                <PlusCircle className="h-4 w-4" />
+                New Article
               </Link>
               <Link
                 href="/profile/bookmarks"

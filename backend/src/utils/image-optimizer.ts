@@ -29,8 +29,8 @@ export async function optimizeImage(
 
     // Resize and optimize
     let processedImage = image.resize(width, height, {
-      fit: 'cover',
-      position: 'center',
+      fit: 'inside',
+      withoutEnlargement: true,
     });
 
     // Apply format-specific optimizations

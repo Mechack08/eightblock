@@ -7,22 +7,37 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../uploads/avatars');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Ensure upload directories exist
+const avatarDir = path.join(__dirname, '../../uploads/avatars');
+const articleDir = path.join(__dirname, '../../uploads/articles');
 
-// Configure multer storage
-const storage = multer.diskStorage({
+[avatarDir, articleDir].forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// Storage for avatars
+const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, avatarDir);
   },
   filename: (req, file, cb) => {
-    // Generate unique filename with timestamp
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = path.extname(file.originalname);
     cb(null, `avatar-${uniqueSuffix}${ext}`);
+  },
+});
+
+// Storage for article images
+const articleStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, articleDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `article-${uniqueSuffix}${ext}`);
   },
 });
 
@@ -37,9 +52,18 @@ const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCa
   }
 };
 
-// Configure multer with limits
+// Configure multer for avatars
 export const upload = multer({
-  storage,
+  storage: avatarStorage,
+  fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+  },
+});
+
+// Configure multer for article images
+export const articleUpload = multer({
+  storage: articleStorage,
   fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB max file size

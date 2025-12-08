@@ -188,33 +188,58 @@ export async function getArticle(req: Request, res: Response) {
 }
 
 export async function createArticle(req: Request, res: Response) {
-  const {
-    title,
-    slug,
-    description,
-    content,
-    category,
-    tagIds = [],
-    authorId,
-    status,
-    featured,
-    publishedAt,
-  } = req.body;
+  const userId = req.user?.userId;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  const { title, slug, excerpt, content, tags = [], featuredImage, status = 'DRAFT' } = req.body;
 
   try {
+    // Check if slug already exists
+    const existingArticle = await prisma.article.findUnique({
+      where: { slug },
+    });
+
+    if (existingArticle) {
+      return res.status(400).json({ error: 'An article with this slug already exists' });
+    }
+
+    // Get or create tags
+    const tagRecords = await Promise.all(
+      tags.map(async (tagName: string) => {
+        const tagSlug = tagName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+
+        const tag = await prisma.tag.upsert({
+          where: { name: tagName },
+          update: {},
+          create: {
+            name: tagName,
+            slug: tagSlug,
+          },
+        });
+        return tag;
+      })
+    );
+
     const created = await prisma.article.create({
       data: {
         title,
         slug,
-        description,
+        description: excerpt || '', // Map excerpt to description
         content,
-        category,
-        authorId,
+        category: tags[0] || 'General', // Use first tag as category or default to 'General'
         status,
-        featured,
-        publishedAt,
+        // publishedAt will use default value from schema (@default(now()))
+        author: {
+          connect: { id: userId },
+        },
         tags: {
-          create: tagIds.map((tagId: string) => ({ tagId })),
+          create: tagRecords.map((tag) => ({ tagId: tag.id })),
         },
       },
       include: {
