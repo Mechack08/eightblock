@@ -64,9 +64,9 @@ export function ArticleCard({ post }: { post: Post | Article }) {
               size="xs"
             />
             <span>
-              {typeof post.author === 'object' && post.author?.name
-                ? post.author.name
-                : post.author}{' '}
+              {typeof post.author === 'object'
+                ? post.author?.name || 'Anonymous'
+                : post.author || 'Anonymous'}{' '}
               ·{' '}
               {new Date(post.publishedAt).toLocaleDateString('en-US', {
                 day: 'numeric',

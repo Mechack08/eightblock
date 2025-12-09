@@ -1,52 +1,44 @@
 'use client';
 
+import React, { useEffect, useRef } from 'react';
 import { ArticleCard } from '@/components/articles/article-card';
-import { useInfiniteArticles, Article } from '@/hooks/useInfiniteArticles';
+import { useInfiniteArticles } from '@/hooks/useInfiniteArticles';
 import { useFeaturedArticles } from '@/hooks/useFeaturedArticles';
-import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowUp, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Hero } from '@/components/hero';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
+import { useCarousel } from '@/hooks/useCarousel';
+import { useArticleFiltering } from '@/hooks/useArticleFiltering';
 
 export default function HomePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchQuery = searchParams.get('search') || '';
+
+  // Refs
+  const observerTarget = useRef<HTMLDivElement>(null);
+  const articlesRef = useRef<HTMLDivElement>(null);
+
+  // Data fetching hooks
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useInfiniteArticles(10);
   const { data: featuredArticles, isLoading: featuredLoading } = useFeaturedArticles();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const searchQuery = searchParams.get('search') || '';
 
-  const observerTarget = useRef<HTMLDivElement>(null);
-  const articlesRef = useRef<HTMLDivElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  // Custom hooks
+  const { showScrollTop, scrollToTop } = useScrollToTop(400);
+  const { carouselRef, canScrollLeft, canScrollRight, scrollCarousel } = useCarousel(
+    featuredArticles ?? []
+  );
+  const { filteredArticles, allArticles } = useArticleFiltering(data, searchQuery);
 
-  // Flatten all pages into a single array of articles
-  const allArticles = data?.pages.flatMap((page) => page.articles) ?? [];
-  const featured = featuredArticles ?? [];
+  // Handlers
+  const clearSearch = () => router.push('/');
+  const scrollToArticles = () => articlesRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-  // Filter articles based on search query
-  const filteredArticles = searchQuery
-    ? allArticles.filter((article) => {
-        const query = searchQuery.toLowerCase();
-        return (
-          article.title.toLowerCase().includes(query) ||
-          article.description.toLowerCase().includes(query) ||
-          article.category?.toLowerCase().includes(query) ||
-          article.tags?.some((t) => t.tag.name.toLowerCase().includes(query))
-        );
-      })
-    : allArticles;
-
-  const clearSearch = () => {
-    router.push('/');
-  };
-
-  // Intersection Observer for infinite scroll
+  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -58,74 +50,26 @@ export default function HomePage() {
     );
 
     const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
-    }
+    if (currentTarget) observer.observe(currentTarget);
 
     return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
+      if (currentTarget) observer.unobserve(currentTarget);
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Show/hide scroll to top button
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Update carousel scroll buttons visibility
-  const updateCarouselButtons = () => {
-    const carousel = carouselRef.current;
-    if (carousel) {
-      setCanScrollLeft(carousel.scrollLeft > 0);
-      setCanScrollRight(carousel.scrollLeft < carousel.scrollWidth - carousel.clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    const carousel = carouselRef.current;
-    if (carousel) {
-      updateCarouselButtons();
-      carousel.addEventListener('scroll', updateCarouselButtons);
-      return () => carousel.removeEventListener('scroll', updateCarouselButtons);
-    }
-  }, [featured]);
-
-  const scrollToArticles = () => {
-    articlesRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const scrollCarousel = (direction: 'left' | 'right') => {
-    const carousel = carouselRef.current;
-    if (carousel) {
-      const scrollAmount = carousel.clientWidth * 0.8;
-      carousel.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-    }
-  };
-
+  // Loading state
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent" />
           <p className="mt-4 text-gray-600">Loading articles...</p>
         </div>
       </div>
     );
   }
 
+  // Error state
   if (isError) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -134,200 +78,402 @@ export default function HomePage() {
     );
   }
 
+  const featured = featuredArticles ?? [];
+
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section */}
       <Hero onScrollToArticles={scrollToArticles} />
 
-      {/* Featured Articles Carousel - Only show if more than 3 featured articles and not searching */}
       {!searchQuery && !featuredLoading && featured.length > 0 && (
-        <section className="bg-gray-50 py-16">
-          <div className="mx-auto max-w-6xl px-4">
-            <h2 className="mb-8 text-2xl font-bold text-[#080808]">Featured Articles</h2>
-
-            {featured.length <= 3 ? (
-              <div className="grid gap-8 md:grid-cols-3">
-                {featured.map((article) => (
-                  <ArticleCard
-                    key={article.slug}
-                    post={
-                      {
-                        ...article,
-                        readingTime: Math.ceil(article.content.split(' ').length / 200),
-                      } as any
-                    }
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="relative">
-                {/* Carousel Navigation Buttons */}
-                {canScrollLeft && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
-                    onClick={() => scrollCarousel('left')}
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </Button>
-                )}
-                {canScrollRight && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
-                    onClick={() => scrollCarousel('right')}
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </Button>
-                )}
-
-                {/* Scrollable Carousel */}
-                <div
-                  ref={carouselRef}
-                  className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
-                  style={{
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none',
-                  }}
-                >
-                  {featured.map((article) => (
-                    <div
-                      key={article.slug}
-                      className="flex-none w-full md:w-[calc(33.333%-1rem)] snap-start"
-                      draggable="true"
-                      onDragStart={(e) => {
-                        const carousel = carouselRef.current;
-                        if (carousel) {
-                          const startX = e.clientX;
-                          const scrollLeft = carousel.scrollLeft;
-                          const handleDrag = (moveEvent: MouseEvent) => {
-                            const x = moveEvent.clientX;
-                            const walk = (startX - x) * 2;
-                            carousel.scrollLeft = scrollLeft + walk;
-                          };
-                          const handleDragEnd = () => {
-                            document.removeEventListener('mousemove', handleDrag);
-                            document.removeEventListener('mouseup', handleDragEnd);
-                          };
-                          document.addEventListener('mousemove', handleDrag);
-                          document.addEventListener('mouseup', handleDragEnd);
-                        }
-                      }}
-                    >
-                      <ArticleCard
-                        post={
-                          {
-                            ...article,
-                            readingTime: Math.ceil(article.content.split(' ').length / 200),
-                          } as any
-                        }
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+        <FeaturedArticlesSection
+          articles={featured}
+          carouselRef={carouselRef}
+          canScrollLeft={canScrollLeft}
+          canScrollRight={canScrollRight}
+          onScrollCarousel={scrollCarousel}
+        />
       )}
 
-      {/* Explore Articles with Infinite Scroll */}
-      <section ref={articlesRef} className="py-16" id="articles">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="mb-8 flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-[#080808]">
-              {searchQuery ? 'Search Results' : 'Explore Articles'}
-            </h2>
-            {searchQuery && (
-              <Button variant="outline" onClick={clearSearch} className="flex items-center gap-2">
-                <X className="h-4 w-4" />
-                Clear Search
-              </Button>
-            )}
+      <ExploreArticlesSection
+        ref={articlesRef}
+        articles={filteredArticles}
+        allArticles={allArticles}
+        searchQuery={searchQuery}
+        onClearSearch={clearSearch}
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        observerTarget={observerTarget}
+      />
+
+      {showScrollTop && <ScrollToTopButton onClick={scrollToTop} />}
+    </div>
+  );
+}
+
+// ============================================================================
+// Featured Articles Section Component
+// ============================================================================
+interface FeaturedArticlesSectionProps {
+  articles: any[];
+  carouselRef: React.RefObject<HTMLDivElement>;
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+  onScrollCarousel: (direction: 'left' | 'right') => void;
+}
+
+function FeaturedArticlesSection({
+  articles,
+  carouselRef,
+  canScrollLeft,
+  canScrollRight,
+  onScrollCarousel,
+}: FeaturedArticlesSectionProps) {
+  const shouldShowCarousel = articles.length > 3;
+
+  return (
+    <section className="bg-gray-50 py-16">
+      <div className="mx-auto max-w-6xl px-4">
+        <h2 className="mb-8 text-2xl font-bold text-[#080808]">Featured Articles</h2>
+
+        {shouldShowCarousel ? (
+          <FeaturedCarousel
+            articles={articles}
+            carouselRef={carouselRef}
+            canScrollLeft={canScrollLeft}
+            canScrollRight={canScrollRight}
+            onScrollCarousel={onScrollCarousel}
+          />
+        ) : (
+          <FeaturedGrid articles={articles} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ============================================================================
+// Featured Carousel Component
+// ============================================================================
+interface FeaturedCarouselProps {
+  articles: any[];
+  carouselRef: React.RefObject<HTMLDivElement>;
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+  onScrollCarousel: (direction: 'left' | 'right') => void;
+}
+
+function FeaturedCarousel({
+  articles,
+  carouselRef,
+  canScrollLeft,
+  canScrollRight,
+  onScrollCarousel,
+}: FeaturedCarouselProps) {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    const startX = e.clientX;
+    const scrollLeft = carousel.scrollLeft;
+
+    const handleDrag = (moveEvent: MouseEvent) => {
+      const x = moveEvent.clientX;
+      const walk = (startX - x) * 2;
+      carousel.scrollLeft = scrollLeft + walk;
+    };
+
+    const handleDragEnd = () => {
+      document.removeEventListener('mousemove', handleDrag);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+
+    document.addEventListener('mousemove', handleDrag);
+    document.addEventListener('mouseup', handleDragEnd);
+  };
+
+  return (
+    <div className="relative">
+      {canScrollLeft && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute left-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
+          onClick={() => onScrollCarousel('left')}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </Button>
+      )}
+
+      {canScrollRight && (
+        <Button
+          variant="outline"
+          size="icon"
+          className="absolute right-0 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white shadow-lg hover:bg-gray-50"
+          onClick={() => onScrollCarousel('right')}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </Button>
+      )}
+
+      <div
+        ref={carouselRef}
+        className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {articles.map((article) => (
+          <div
+            key={article.slug}
+            className="flex-none w-full md:w-[calc(33.333%-1rem)] snap-start"
+            draggable="true"
+            onDragStart={handleDragStart}
+          >
+            <ArticleCard
+              post={{
+                ...article,
+                readingTime: Math.ceil(article.content.split(' ').length / 200),
+              }}
+            />
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-          {searchQuery && (
-            <p className="mb-6 text-sm text-gray-600">
-              Found {filteredArticles.length} article{filteredArticles.length !== 1 ? 's' : ''}{' '}
-              matching "{searchQuery}"
-            </p>
-          )}
+// ============================================================================
+// Featured Grid Component
+// ============================================================================
+function FeaturedGrid({ articles }: { articles: any[] }) {
+  return (
+    <div className="grid gap-8 md:grid-cols-3">
+      {articles.map((article) => (
+        <ArticleCard
+          key={article.slug}
+          post={{
+            ...article,
+            readingTime: Math.ceil(article.content.split(' ').length / 200),
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
-          {filteredArticles.length === 0 ? (
-            <p className="text-center text-gray-600">
-              {searchQuery ? `No articles found matching "${searchQuery}".` : 'No articles found.'}
-            </p>
+// ============================================================================
+// Explore Articles Section Component
+// ============================================================================
+interface ExploreArticlesSectionProps {
+  articles: any[];
+  allArticles: any[];
+  searchQuery: string;
+  onClearSearch: () => void;
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  observerTarget: React.RefObject<HTMLDivElement>;
+}
+
+const ExploreArticlesSection = React.forwardRef<HTMLDivElement, ExploreArticlesSectionProps>(
+  (
+    {
+      articles,
+      allArticles,
+      searchQuery,
+      onClearSearch,
+      hasNextPage,
+      isFetchingNextPage,
+      observerTarget,
+    },
+    ref
+  ) => {
+    const hasArticles = articles.length > 0;
+
+    return (
+      <section ref={ref} className="py-16" id="articles">
+        <div className="mx-auto max-w-6xl px-4">
+          <SectionHeader searchQuery={searchQuery} onClearSearch={onClearSearch} />
+
+          {searchQuery && <SearchResultsInfo count={articles.length} query={searchQuery} />}
+
+          {!hasArticles ? (
+            <EmptyState searchQuery={searchQuery} />
           ) : (
             <>
-              <div className="space-y-6">
-                {filteredArticles.map((article) => (
-                  <div key={article.slug} className="flex gap-6 border-b pb-6 last:border-b-0">
-                    <div className="flex-1">
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">
-                        {article.category} ·{' '}
-                        {new Date(article.publishedAt).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}{' '}
-                        · {Math.ceil(article.content.split(' ').length / 200)} min read
-                      </p>
-                      <h3 className="mb-2 text-xl font-bold text-[#080808] hover:underline">
-                        <a href={`/articles/${article.slug}`}>{article.title}</a>
-                      </h3>
-                      <p className="text-sm text-gray-600">{article.description}</p>
-                    </div>
-                    <div className="h-32 w-48 flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-blue-400 to-purple-500">
-                      {article.featuredImage ? (
-                        <Image
-                          src={article.featuredImage}
-                          alt={article.title}
-                          width={192}
-                          height={128}
-                          className="h-full w-full object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center">
-                          {/* Gradient placeholder */}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ArticlesList articles={articles} />
 
-              {/* Loading indicator - only show when not searching */}
               {!searchQuery && (
-                <div ref={observerTarget} className="mt-8 text-center">
-                  {isFetchingNextPage && (
-                    <div className="inline-flex items-center gap-2">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
-                      <span className="text-gray-600">Loading more...</span>
-                    </div>
-                  )}
-                  {!hasNextPage && allArticles.length > 0 && (
-                    <p className="text-gray-500">You've reached the end!</p>
-                  )}
-                </div>
+                <LoadingIndicator
+                  ref={observerTarget}
+                  isFetchingNextPage={isFetchingNextPage}
+                  hasNextPage={hasNextPage}
+                  hasArticles={allArticles.length > 0}
+                />
               )}
             </>
           )}
         </div>
       </section>
+    );
+  }
+);
+ExploreArticlesSection.displayName = 'ExploreArticlesSection';
 
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <Button
-          onClick={scrollToTop}
-          size="icon"
-          className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full bg-[#080808] shadow-lg hover:bg-gray-800 transition-all duration-300"
-        >
-          <ArrowUp className="h-5 w-5" />
+// ============================================================================
+// Section Header Component
+// ============================================================================
+function SectionHeader({
+  searchQuery,
+  onClearSearch,
+}: {
+  searchQuery: string;
+  onClearSearch: () => void;
+}) {
+  return (
+    <div className="mb-8 flex items-center justify-between">
+      <h2 className="text-2xl font-bold text-[#080808]">
+        {searchQuery ? 'Search Results' : 'Explore Articles'}
+      </h2>
+      {searchQuery && (
+        <Button variant="outline" onClick={onClearSearch} className="flex items-center gap-2">
+          <X className="h-4 w-4" />
+          Clear Search
         </Button>
       )}
     </div>
+  );
+}
+
+// ============================================================================
+// Search Results Info Component
+// ============================================================================
+function SearchResultsInfo({ count, query }: { count: number; query: string }) {
+  return (
+    <p className="mb-6 text-sm text-gray-600">
+      Found {count} article{count !== 1 ? 's' : ''} matching "{query}"
+    </p>
+  );
+}
+
+// ============================================================================
+// Empty State Component
+// ============================================================================
+function EmptyState({ searchQuery }: { searchQuery: string }) {
+  return (
+    <p className="text-center text-gray-600">
+      {searchQuery ? `No articles found matching "${searchQuery}".` : 'No articles found.'}
+    </p>
+  );
+}
+
+// ============================================================================
+// Articles List Component
+// ============================================================================
+function ArticlesList({ articles }: { articles: any[] }) {
+  const calculateReadingTime = (content: string) => Math.ceil(content.split(' ').length / 200);
+
+  return (
+    <div className="space-y-6">
+      {articles.map((article) => (
+        <ArticleListItem
+          key={article.slug}
+          article={article}
+          readingTime={calculateReadingTime(article.content)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// Article List Item Component
+// ============================================================================
+interface ArticleListItemProps {
+  article: any;
+  readingTime: number;
+}
+
+function ArticleListItem({ article, readingTime }: ArticleListItemProps) {
+  const formattedDate = new Date(article.publishedAt).toLocaleDateString('en-US', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+
+  return (
+    <div className="flex gap-6 border-b pb-6 last:border-b-0">
+      <div className="flex-1">
+        <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">
+          {article.category} · {formattedDate} · {readingTime} min read
+        </p>
+        <h3 className="mb-2 text-xl font-bold text-[#080808] hover:underline">
+          <a href={`/articles/${article.slug}`}>{article.title}</a>
+        </h3>
+        <p className="text-sm text-gray-600">{article.description}</p>
+      </div>
+
+      <ArticleThumbnail image={article.featuredImage} title={article.title} />
+    </div>
+  );
+}
+
+// ============================================================================
+// Article Thumbnail Component
+// ============================================================================
+function ArticleThumbnail({ image, title }: { image?: string; title: string }) {
+  return (
+    <div className="h-32 w-48 flex-shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-blue-400 to-purple-500">
+      {image ? (
+        <Image
+          src={image}
+          alt={title}
+          width={192}
+          height={128}
+          className="h-full w-full object-cover"
+          unoptimized
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center" />
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Loading Indicator Component
+// ============================================================================
+interface LoadingIndicatorProps {
+  isFetchingNextPage: boolean;
+  hasNextPage: boolean;
+  hasArticles: boolean;
+}
+
+const LoadingIndicator = React.forwardRef<HTMLDivElement, LoadingIndicatorProps>(
+  ({ isFetchingNextPage, hasNextPage, hasArticles }, ref) => {
+    return (
+      <div ref={ref} className="mt-8 text-center">
+        {isFetchingNextPage && (
+          <div className="inline-flex items-center gap-2">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <span className="text-gray-600">Loading more...</span>
+          </div>
+        )}
+        {!hasNextPage && hasArticles && <p className="text-gray-500">You've reached the end!</p>}
+      </div>
+    );
+  }
+);
+LoadingIndicator.displayName = 'LoadingIndicator';
+
+// ============================================================================
+// Scroll to Top Button Component
+// ============================================================================
+function ScrollToTopButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button
+      onClick={onClick}
+      size="icon"
+      className="fixed bottom-8 right-8 z-50 h-12 w-12 rounded-full bg-[#080808] shadow-lg hover:bg-gray-800 transition-all duration-300"
+    >
+      <ArrowUp className="h-5 w-5" />
+    </Button>
   );
 }
