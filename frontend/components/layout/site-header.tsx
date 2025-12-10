@@ -50,8 +50,6 @@ export function SiteHeader() {
 
       {/* Spacer to prevent content jump when header becomes fixed */}
       {isSticky && <div className="h-[72px]" />}
-
-      <Hero />
     </>
   );
 }

@@ -1,41 +1,268 @@
-import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
-import { allPosts } from 'contentlayer/generated';
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { notFound, useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { PageViewTracker } from '@/lib/view-tracking';
+import { useWallet } from '@/lib/wallet-context';
+import { useToast } from '@/hooks/use-toast';
+import { ArticleHeader } from '@/components/articles/article-header';
 import { ArticleContent } from '@/components/articles/article-content';
-import { ArticleMeta } from '@/components/articles/article-meta';
+import { ArticleEngagement } from '@/components/articles/article-engagement';
+import { ArticleAuthor } from '@/components/articles/article-author';
+import { CommentsSection } from '@/components/articles/comments-section';
+import { useArticleInteractions } from '@/hooks/useArticleInteractions';
 
-interface ArticlePageProps {
-  params: Promise<{ slug: string }>;
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-export function generateStaticParams() {
-  return allPosts.map((post) => ({ slug: post.slug }));
-}
-
-export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
-  const { slug } = await params;
-  const post = allPosts.find((p) => p.slug === slug);
-  if (!post) return {};
-
-  return {
-    title: `${post.title} | eightblock`,
-    description: post.description,
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  content: string;
+  category: string;
+  status: string;
+  featured: boolean;
+  featuredImage?: string;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+  viewCount: number;
+  uniqueViews: number;
+  author: {
+    id: string;
+    walletAddress: string;
+    name: string | null;
+    bio?: string | null;
+    avatarUrl?: string | null;
+  };
+  tags: Array<{
+    tag: {
+      id: string;
+      name: string;
+    };
+  }>;
+  _count?: {
+    likes: number;
+    comments: number;
   };
 }
 
-export default async function ArticlePage({ params }: ArticlePageProps) {
-  const { slug } = await params;
-  const post = allPosts.find((p) => p.slug === slug);
+async function fetchArticle(slug: string): Promise<Article> {
+  const response = await fetch(`${API_URL}/articles/${slug}`);
+  if (!response.ok) {
+    if (response.status === 404) throw new Error('Article not found');
+    throw new Error('Failed to fetch article');
+  }
+  return response.json();
+}
 
-  if (!post) return notFound();
+export default function ArticlePage({ params }: { params: { slug: string } }) {
+  const [slug, setSlug] = useState<string>('');
+  const router = useRouter();
+  const { address } = useWallet();
+  const queryClient = useQueryClient();
+  const toast = useToast?.() || { toast: () => {} };
+  const viewTrackerRef = useRef<PageViewTracker | null>(null);
+
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    const id = localStorage.getItem('userId');
+    setAuthToken(token);
+    setUserId(id);
+  }, [address]);
+
+  useEffect(() => {
+    Promise.resolve(params).then((p) => setSlug(p.slug));
+  }, [params]);
+
+  const {
+    data: article,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['article', slug],
+    queryFn: () => fetchArticle(slug),
+    enabled: !!slug,
+    retry: false,
+  });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Article Page Debug:', { slug, isLoading, isError, error, article });
+  }, [slug, isLoading, isError, error, article]);
+
+  const isPublished = article?.status === 'PUBLISHED';
+  const isOwner = article?.author.id === userId;
+
+  // Article interactions hook
+  const {
+    userLiked,
+    bookmarked,
+    comments,
+    likeMutation,
+    commentMutation,
+    updateCommentMutation,
+    deleteCommentMutation,
+    handleLike,
+    handleBookmark,
+    handleShare,
+  } = useArticleInteractions({
+    articleId: article?.id || '',
+    userId,
+    authToken,
+    articleSlug: slug,
+    isPublished,
+  });
+
+  // View tracking
+  useEffect(() => {
+    if (article?.id && isPublished && !viewTrackerRef.current) {
+      viewTrackerRef.current = new PageViewTracker(article.id);
+    }
+
+    return () => {
+      if (viewTrackerRef.current) {
+        viewTrackerRef.current.track();
+        viewTrackerRef.current = null;
+      }
+    };
+  }, [article?.id, isPublished]);
+
+  // Publish article handler
+  const handlePublish = async () => {
+    if (!article || !authToken) return;
+
+    try {
+      const response = await fetch(`${API_URL}/articles/${article.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ status: 'PUBLISHED' }),
+      });
+
+      if (response.ok) {
+        toast.toast?.({ title: 'Success', description: 'Article published!' });
+        queryClient.invalidateQueries({ queryKey: ['article', slug] });
+      }
+    } catch (error) {
+      toast.toast?.({
+        title: 'Error',
+        description: 'Failed to publish article',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (!slug || isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-t-transparent mx-auto" />
+          <p className="mt-4 text-gray-600">Loading article...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError || !article) {
+    notFound();
+  }
+
+  // Draft access control
+  if (article.status === 'DRAFT' && !isOwner) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <div className="mb-6">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
+              <AlertTriangle className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Draft Article</h1>
+          <p className="text-gray-600 mb-6">
+            This article is currently in draft mode and can only be viewed by its author.
+          </p>
+          <Link href="/">
+            <Button>Browse Published Articles</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const readingTime = Math.ceil(article.content.split(' ').length / 200);
+  const likesCount =
+    (article._count?.likes || 0) +
+    (userLiked && !likeMutation.isPending ? 0 : likeMutation.isPending && !userLiked ? 1 : 0);
 
   return (
-    <article className="mx-auto max-w-3xl space-y-8 px-4 py-10">
-      <span className="text-sm uppercase tracking-wide text-primary">{post.category}</span>
-      <h1 className="text-4xl font-bold leading-tight">{post.title}</h1>
-      <p className="text-lg text-muted-foreground">{post.description}</p>
-      <ArticleMeta post={post} />
-      <ArticleContent code={post.body.code} />
-    </article>
+    <div className="min-h-screen bg-white">
+      <ArticleHeader
+        article={article}
+        readingTime={readingTime}
+        isOwner={isOwner}
+        onBack={() => router.back()}
+        onEdit={() => router.push(`/articles/${article.slug}/edit`)}
+        onPublish={handlePublish}
+      />
+
+      <ArticleContent content={article.content} />
+
+      {isPublished && (
+        <>
+          <ArticleEngagement
+            likesCount={likesCount}
+            commentsCount={comments.length}
+            userLiked={userLiked}
+            bookmarked={bookmarked}
+            isLiking={likeMutation.isPending}
+            onLike={handleLike}
+            onComment={() => {
+              const commentsSection = document.getElementById('comments');
+              commentsSection?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            onShare={() => handleShare(article.title, article.description)}
+            onBookmark={handleBookmark}
+          />
+
+          <ArticleAuthor author={article.author} />
+
+          <CommentsSection
+            comments={comments}
+            isAuthenticated={!!address}
+            currentUserId={userId}
+            isPostingComment={commentMutation.isPending}
+            isUpdatingComment={updateCommentMutation.isPending}
+            isDeletingComment={deleteCommentMutation.isPending}
+            onPostComment={(content) => commentMutation.mutate(content)}
+            onUpdateComment={(commentId, content) =>
+              updateCommentMutation.mutate({ commentId, content })
+            }
+            onDeleteComment={(commentId) => deleteCommentMutation.mutate(commentId)}
+          />
+        </>
+      )}
+
+      {/* Footer CTA */}
+      <div className="border-t bg-gray-50 py-12">
+        <div className="mx-auto max-w-4xl px-4 text-center">
+          <h2 className="mb-4 text-2xl font-bold text-gray-900">Ready to explore more articles?</h2>
+          <Link href="/">
+            <Button size="lg">Browse All Articles</Button>
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }

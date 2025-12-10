@@ -1,18 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useWallet } from '@/lib/wallet-context';
 import { Button } from '../ui/button';
-import { ChevronDown, LogOut, User, Wallet } from 'lucide-react';
+import { Avatar } from '../ui/avatar';
+import { ChevronDown, LogOut, User, Wallet, Bookmark, FileText, PlusCircle } from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function LoginBtn() {
   const { connected, connecting, address, connect, disconnect, availableWallets } = useWallet();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showWalletSelect, setShowWalletSelect] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    name: string | null;
+    avatarUrl: string | null;
+  } | null>(null);
 
   const truncateAddress = (addr: string) => {
     return `${addr.slice(0, 8)}...${addr.slice(-8)}`;
+  };
+
+  useEffect(() => {
+    if (connected && address) {
+      fetchUserProfile();
+    }
+  }, [connected, address]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/users/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserProfile({ name: data.name, avatarUrl: data.avatarUrl });
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
   };
 
   const handleWalletSelect = async (walletName: string) => {
@@ -27,8 +60,8 @@ export default function LoginBtn() {
           onClick={() => setShowProfileMenu(!showProfileMenu)}
           className="bg-[#080808] px-4 text-base hover:bg-[#080808]/90 rounded-[2px] flex items-center gap-2"
         >
-          <User className="h-4 w-4" />
-          {truncateAddress(address)}
+          <Avatar src={userProfile?.avatarUrl} name={userProfile?.name} size="xs" />
+          {userProfile?.name || truncateAddress(address)}
           <ChevronDown className="h-4 w-4" />
         </Button>
 
@@ -43,6 +76,31 @@ export default function LoginBtn() {
                 <User className="h-4 w-4" />
                 My Profile
               </Link>
+              <Link
+                href="/profile/articles"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowProfileMenu(false)}
+              >
+                <FileText className="h-4 w-4" />
+                My Articles
+              </Link>
+              <Link
+                href="/articles/new"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowProfileMenu(false)}
+              >
+                <PlusCircle className="h-4 w-4" />
+                New Article
+              </Link>
+              <Link
+                href="/profile/bookmarks"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => setShowProfileMenu(false)}
+              >
+                <Bookmark className="h-4 w-4" />
+                Bookmarks
+              </Link>
+              <div className="border-t border-gray-200 my-1"></div>
               {availableWallets.length > 1 && (
                 <button
                   onClick={() => {

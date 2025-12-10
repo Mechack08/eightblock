@@ -5,7 +5,10 @@ Open-source blockchain and Cardano education hub featuring a collaborative blog,
 ## Features
 
 - **Education-first blog** with MDX-powered articles, categories, tags, and featured content
+- **Infinite scroll** with React Query for seamless content browsing
+- **Redis caching** for blazing-fast performance and reduced database load
 - **Community engagement** via likes, threaded comments, and newsletter subscriptions
+- **Wallet-based authentication** using Cardano wallets (no email/password required)
 - **Admin experience** for managing articles, metadata, and reader interactions
 - **Stateless REST API** with OpenAPI docs, Prisma ORM, and PostgreSQL storage
 - **Open-source readiness** including contribution guidelines, issue/PR templates, linting, tests, and CI
@@ -20,46 +23,116 @@ backend/    # Express + Prisma + PostgreSQL REST API
 
 ## Getting Started
 
-Requirements: Node.js 20+, pnpm 9+, PostgreSQL 15+, and OpenSSL for JWT signing.
+### Quick Start (Recommended - With Docker)
+
+Requirements: Node.js 20+, pnpm 9+, Docker Desktop
 
 1. **Install dependencies**
+
    ```bash
    pnpm install
    ```
+
 2. **Environment variables**
-   - Copy `.env.example` to `.env` at the repo root and fill in database + auth secrets (see comments inside the sample file).
-   - Frontend uses `NEXT_PUBLIC_API_URL`; backend uses `DATABASE_URL`, `JWT_SECRET`, and optional NextAuth provider keys.
-3. **Database setup**
+
+   ```bash
+   cp .env.example .env
+   # Edit .env if needed - default values work with Docker setup
+   ```
+
+3. **Start everything** (PostgreSQL + Redis + Backend + Frontend)
+
+   ```bash
+   pnpm dev
+   ```
+
+   This single command will:
+   - Start PostgreSQL and Redis in Docker containers
+   - Run database migrations automatically
+   - Start the backend API (port 5000)
+   - Start the frontend (port 3000)
+
+4. **Seed the database** (first time only)
+
+   ```bash
+   cd backend
+   pnpm prisma db seed
+   ```
+
+5. **Access the app**
+   - Frontend: http://localhost:3000
+   - Backend API: http://localhost:5000/api
+   - API Docs: http://localhost:5000/api/docs
+
+### Manual Setup (Without Docker)
+
+Requirements: Node.js 20+, pnpm 9+, PostgreSQL 15+, Redis 7+
+
+1. **Install dependencies**
+
+   ```bash
+   pnpm install
+   ```
+
+2. **Start PostgreSQL and Redis manually**
+
+   ```bash
+   # macOS
+   brew install postgresql@15 redis
+   brew services start postgresql@15
+   brew services start redis
+
+   # Ubuntu
+   sudo apt install postgresql redis-server
+   sudo systemctl start postgresql redis-server
+   ```
+
+3. **Environment variables**
+
+   ```bash
+   cp .env.example .env
+   # Update DATABASE_URL with your PostgreSQL credentials
+   ```
+
+4. **Database setup**
+
    ```bash
    cd backend
    pnpm prisma migrate dev
-   pnpm prisma db seed # (optional) adds sample content
+   pnpm prisma db seed
    ```
-4. **Run the backend API**
+
+5. **Run the app**
    ```bash
-   cd backend
-   pnpm dev
-   ```
-5. **Run the frontend**
-
-   ```bash
-   cd frontend
-   pnpm dev
+   pnpm dev  # Starts frontend + backend (but not DB/Redis)
    ```
 
-   ## Frontend (Next.js)
-   - Located in `frontend/` with `app/`, `components/`, `lib/`, `styles/`, and MDX `content/`
-   - TailwindCSS + ShadCN UI pre-configured (see `components.json`)
-   - Contentlayer ingests MDX posts (run `pnpm --filter frontend dev` for hot reload)
-   - NextAuth route at `app/api/auth/[...nextauth]` proxies to backend JWT login
-   - Sample article lives at `content/welcome-to-eightblock.mdx`
+### Useful Commands
 
-   ## Backend (Express API)
-   - Located in `backend/` with `src/routes`, `controllers`, `middleware`, `utils`, and `prisma`
-   - Run `pnpm --filter backend dev` to start the server on port 4000
-   - Prisma schema models users, articles, comments, likes, tags, and subscriptions
-   - Swagger docs exposed at `/api/docs`; REST endpoints mounted under `/api/*`
-   - Winston-based logger, Zod validation middleware, and JWT auth helpers included
+| Command               | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `pnpm dev`            | Start all services (Docker + Frontend + Backend) |
+| `pnpm services:start` | Start only Docker services (PostgreSQL + Redis)  |
+| `pnpm services:stop`  | Stop Docker services                             |
+| `pnpm services:logs`  | View Docker service logs                         |
+| `pnpm dev:frontend`   | Start only the frontend                          |
+| `pnpm dev:backend`    | Start only the backend                           |
+
+## Frontend (Next.js)
+
+- Located in `frontend/` with `app/`, `components/`, `lib/`, `styles/`, and MDX `content/`
+- TailwindCSS + ShadCN UI pre-configured (see `components.json`)
+- Contentlayer ingests MDX posts (run `pnpm --filter frontend dev` for hot reload)
+- NextAuth route at `app/api/auth/[...nextauth]` proxies to backend JWT login
+- Sample article lives at `content/welcome-to-eightblock.mdx`
+
+## Backend (Express API)
+
+- Located in `backend/` with `src/routes`, `controllers`, `middleware`, `utils`, and `prisma`
+- Run `pnpm --filter backend dev` to start the server on port 4000
+- Prisma schema models users, articles, comments, likes, tags, and subscriptions
+- Swagger docs exposed at `/api/docs`; REST endpoints mounted under `/api/*`
+- Winston-based logger, Zod validation middleware, and JWT auth helpers included
 
 ## Scripts
 
@@ -73,9 +146,10 @@ Root scripts proxy to workspaces via pnpm:
 
 ## Tech Stack
 
-- **Frontend:** Next.js 15, TypeScript, TailwindCSS, ShadCN UI, Contentlayer MDX
-- **Backend:** Express 5, Prisma ORM, PostgreSQL, Zod validation, Winston logging, Swagger UI
-- **Auth:** JWT-first architecture with optional NextAuth providers
+- **Frontend:** Next.js 15, TypeScript, TailwindCSS, ShadCN UI, React Query, Contentlayer MDX
+- **Backend:** Express 5, Prisma ORM, PostgreSQL, Redis (ioredis), Zod validation, Winston logging, Swagger UI
+- **Auth:** Cardano wallet-based authentication (MeshSDK)
+- **Caching:** Redis for API responses with automatic invalidation
 - **Tooling:** pnpm workspaces, ESLint, Prettier, Husky, GitHub Actions (lint & tests)
 
 ## Contribution Flow

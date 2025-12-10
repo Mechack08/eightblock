@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-export function Hero() {
+interface HeroProps {
+  onScrollToArticles?: () => void;
+}
+
+export function Hero({ onScrollToArticles }: HeroProps) {
   const pathname = usePathname();
 
   // Only show hero on home page
@@ -22,8 +26,11 @@ export function Hero() {
         collaboration. All content is community-driven and open for contribution.
       </p>
       <div className="mt-2 flex flex-col justify-center gap-4 sm:flex-row">
-        <Button asChild className="bg-[#080808] px-8 py-6 text-base hover:bg-[#080808]/90">
-          <Link href="/articles">Read Articles</Link>
+        <Button
+          onClick={onScrollToArticles}
+          className="bg-[#080808] px-8 py-6 text-base hover:bg-[#080808]/90"
+        >
+          Read Articles
         </Button>
         <Button
           variant="outline"
