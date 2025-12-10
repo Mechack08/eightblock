@@ -12,6 +12,7 @@ dist/
 out/
 build/
 coverage/
+.contentlayer/
 
 # prisma
 backend/prisma/dev.db
