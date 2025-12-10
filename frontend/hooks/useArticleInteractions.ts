@@ -72,8 +72,15 @@ export function useArticleInteractions({
       return { previousLiked };
     },
     onSuccess: () => {
+      // Invalidate the specific article query
       queryClient.invalidateQueries({ queryKey: ['article', articleSlug] });
       queryClient.invalidateQueries({ queryKey: ['article-like', articleId, userId] });
+
+      // Invalidate all article list queries for real-time updates on homepage
+      // This catches: ['articles', 'infinite'], ['trending-articles', ...], etc.
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['trending-articles'] });
+
       toast.toast?.({
         title: userLiked ? 'Like removed' : 'Article liked!',
         description: userLiked ? 'You unliked this article' : 'Thanks for your support!',
@@ -98,8 +105,15 @@ export function useArticleInteractions({
       return createComment(articleId, content, userId, authToken);
     },
     onSuccess: () => {
+      // Invalidate article-specific queries
       queryClient.invalidateQueries({ queryKey: ['article-comments', articleId] });
       queryClient.invalidateQueries({ queryKey: ['article', articleSlug] });
+
+      // Invalidate all article list queries for real-time updates on homepage
+      // This catches: ['articles', 'infinite'], ['trending-articles', ...], etc.
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['trending-articles'] });
+
       toast.toast?.({
         title: 'Comment posted!',
         description: 'Your comment has been added successfully.',
@@ -143,8 +157,15 @@ export function useArticleInteractions({
       return deleteComment(articleId, commentId, authToken);
     },
     onSuccess: () => {
+      // Invalidate article-specific queries
       queryClient.invalidateQueries({ queryKey: ['article-comments', articleId] });
       queryClient.invalidateQueries({ queryKey: ['article', articleSlug] });
+
+      // Invalidate all article list queries for real-time updates on homepage
+      // This catches: ['articles', 'infinite'], ['trending-articles', ...], etc.
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['trending-articles'] });
+
       toast.toast?.({
         title: 'Comment deleted!',
         description: 'Your comment has been removed.',

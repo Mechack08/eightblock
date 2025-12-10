@@ -54,6 +54,6 @@ export function useInfiniteArticles(limit: number = 10) {
       return page < totalPages ? page + 1 : undefined;
     },
     initialPageParam: 1,
-    staleTime: 60 * 1000, // 1 minute
+    staleTime: 30 * 1000, // 30 seconds - aggressive for real-time updates
   });
 }
