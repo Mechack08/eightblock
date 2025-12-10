@@ -97,8 +97,8 @@ export function useTrendingArticles(options: UseTrendingArticlesOptions = {}) {
   return useQuery({
     queryKey: ['trending-articles', limit],
     queryFn: () => fetchTrendingArticles(limit),
-    staleTime: 5 * 60 * 1000, // 5 minutes - trending can be cached briefly
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    staleTime: 30 * 1000, // 30 seconds - aggressive for real-time trending updates
+    refetchInterval: 2 * 60 * 1000, // Refresh every 2 minutes
     enabled,
   });
 }

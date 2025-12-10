@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { prisma } from '@/prisma/client';
+import { cacheDelPattern } from '@/utils/redis';
 
 export async function upsertLike(req: Request, res: Response) {
   const { articleId } = req.params;
@@ -12,6 +13,10 @@ export async function upsertLike(req: Request, res: Response) {
     update: {},
     create: { articleId, userId: finalUserId },
   });
+
+  // Invalidate article list cache for real-time updates
+  await cacheDelPattern('articles:page:*');
+
   return res.json(like);
 }
 
@@ -22,6 +27,10 @@ export async function removeLike(req: Request, res: Response) {
   if (!finalUserId) return res.status(401).json({ error: 'User required' });
 
   await prisma.like.delete({ where: { articleId_userId: { articleId, userId: finalUserId } } });
+
+  // Invalidate article list cache for real-time updates
+  await cacheDelPattern('articles:page:*');
+
   return res.status(204).send();
 }
 

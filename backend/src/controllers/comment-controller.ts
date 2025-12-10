@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { prisma } from '@/prisma/client';
+import { cacheDelPattern } from '@/utils/redis';
 
 export async function listComments(req: Request, res: Response) {
   const { articleId } = req.params;
@@ -38,6 +39,10 @@ export async function createComment(req: Request, res: Response) {
       },
     },
   });
+
+  // Invalidate article list cache for real-time updates
+  await cacheDelPattern('articles:page:*');
+
   return res.status(201).json(comment);
 }
 
@@ -113,6 +118,9 @@ export async function deleteComment(req: Request, res: Response) {
     await prisma.comment.delete({
       where: { id: commentId },
     });
+
+    // Invalidate article list cache for real-time updates
+    await cacheDelPattern('articles:page:*');
 
     return res.status(204).send();
   } catch (error) {
