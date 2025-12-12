@@ -56,9 +56,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       // Connect to the first available wallet
       const selectedWalletName = installedWallets[0].name;
       const browserWallet = await BrowserWallet.enable(selectedWalletName);
-      const walletAddress = await browserWallet.getChangeAddress();
+      const walletAddress = (await browserWallet.getChangeAddress()).toLowerCase();
 
-      // Secure authentication flow with signature verification
+      // Secure authentication with CIP-30 direct API
       try {
         // Step 1: Request nonce from backend
         const nonceResponse = await fetch(`${API_URL}/auth/wallet/nonce`, {
@@ -74,10 +74,26 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           throw new Error(error.error || 'Failed to get authentication challenge');
         }
 
-        const { nonce, message } = await nonceResponse.json();
+        const { nonce } = await nonceResponse.json();
 
-        // Step 2: Sign the nonce with wallet
-        const signedData = await browserWallet.signData(walletAddress, message);
+        // Step 2: Sign nonce using raw CIP-30 API (not MeshSDK's broken signData)
+        // Access the wallet's CIP-30 API directly
+        const cardanoWallet = (window as any).cardano[selectedWalletName.toLowerCase()];
+        if (!cardanoWallet) {
+          throw new Error('Wallet API not available');
+        }
+
+        const api = await cardanoWallet.enable();
+
+        // Convert nonce to hex bytes for signing
+        const encoder = new TextEncoder();
+        const nonceBytes = encoder.encode(nonce);
+        const nonceHex = Array.from(nonceBytes)
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+
+        // Sign the nonce with CIP-30 signData
+        const signedData = await api.signData(walletAddress, nonceHex);
 
         // Step 3: Send signature to backend for verification
         const authResponse = await fetch(`${API_URL}/auth/wallet`, {

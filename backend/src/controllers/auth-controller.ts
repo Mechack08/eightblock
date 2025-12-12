@@ -19,9 +19,12 @@ export async function requestNonce(req: Request, res: Response) {
 
   try {
     const nonce = generateNonce(walletAddress);
-    const message = `Sign this message to authenticate with Eight Block.\n\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
 
-    return res.json({ nonce, message });
+    // Return just the nonce - wallet will sign it directly
+    return res.json({
+      nonce,
+      message: `Authenticate with Eight Block\nNonce: ${nonce}`, // Human readable message
+    });
   } catch (error) {
     console.error('Nonce generation error:', error);
     return res.status(500).json({ error: 'Failed to generate authentication challenge' });
@@ -52,8 +55,8 @@ export async function walletAuth(req: Request, res: Response) {
       });
     }
 
-    // Verify the signature
-    const isSignatureValid = verifyCardanoSignature(walletAddress, nonce, signature, key);
+    // Verify the signature (validates cryptographic proof of wallet ownership)
+    const isSignatureValid = await verifyCardanoSignature(walletAddress, nonce, signature, key);
     if (!isSignatureValid) {
       return res.status(401).json({
         error: 'Invalid signature. Wallet ownership verification failed.',
