@@ -14,6 +14,9 @@ importers:
 
   backend:
     dependencies:
+      '@meshsdk/core-cst':
+        specifier: 1.9.0-beta.89
+        version: 1.9.0-beta.89(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/crypto@0.2.5)(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)
       '@prisma/client':
         specifier: ^5.13.0
         version: 5.22.0(prisma@5.22.0)
@@ -35,6 +38,9 @@ importers:
       express:
         specifier: ^4.19.2
         version: 4.21.2
+      express-rate-limit:
+        specifier: ^8.2.1
+        version: 8.2.1(express@4.21.2)
       helmet:
         specifier: ^7.2.0
         version: 7.2.0
@@ -1062,6 +1068,9 @@ packages:
     resolution: {integrity: sha512-gzRqqcJL8sulc2/6iqRXZdWUCEeK3A+jwJ88sbVNzgk4IeMFQLSFg4Ck8ZBETu/W/q1zdknjNfJYyH1OxVriQA==}
     deprecated: update to 1.6.0
 
+  '@harmoniclabs/cbor@1.6.0':
+    resolution: {integrity: sha512-KI25p8pHI1rmFZC9NYSxATwlCZ+KJdjydpptKebHcw03Iy7M+E8mF+hSnN5dTbS45xw5ZyKUgPLRgLo1sTuIoQ==}
+
   '@harmoniclabs/crypto@0.2.5':
     resolution: {integrity: sha512-t2saWMFWBx8tOHotiYTTfQKhPGpWT4AMLXxq3u0apShVXNV0vgL0gEgSMudBjES/wrKByCqa2xmU70gadz26hA==}
 
@@ -1297,6 +1306,9 @@ packages:
   '@meshsdk/common@1.9.0-beta.87':
     resolution: {integrity: sha512-Q4WrlDGhQGxhekLP1j3h+Juftjx+LG90yg0RjRTkjqi83MMa/pfCtX+ZeueR2VuIY/7a/QiY6uZ3++QbnPWqGQ==}
 
+  '@meshsdk/common@1.9.0-beta.89':
+    resolution: {integrity: sha512-K78TSif28c+gcXuk9yeqN0VCI4LNoZm6z+oPI+bQWQz865aSsCBVMuE3AN1plZtLCn6fhhWW5O72HLRQzX+Bkg==}
+
   '@meshsdk/core-cst@1.9.0-beta.53':
     resolution: {integrity: sha512-u8I1g8EqfI+ysCtMg258NrMZ+uoSdM5RlrfVRuss0a7jsrSB64ae1kZXDaO2HROycpwz+muZbCVN5JywSVKmTQ==}
 
@@ -1305,6 +1317,9 @@ packages:
 
   '@meshsdk/core-cst@1.9.0-beta.87':
     resolution: {integrity: sha512-28eNgKHDg8yfPblH+fSQX47Hutvp+4TZONALu6XMXQ/yvk8D4BuB8bhvcTgQTVBr1Bf9yxCXGc/+ZHRR1WY1QA==}
+
+  '@meshsdk/core-cst@1.9.0-beta.89':
+    resolution: {integrity: sha512-DSnAKOlCD+LncUNnxNYMTvOx4Zf7NlV3koa781idA1jCJneW17VSgE7VmrLdg2gO68t7xkF5931xSZUDzUwbIg==}
 
   '@meshsdk/core@1.9.0-beta.68':
     resolution: {integrity: sha512-/1ul9u+WDGylfICcX0Kj1FIDjH4lYyvDae3xmo+X/0DLXDCC9FwgWtpxIyJYXWJUTlsVfjvdqeLbPUeeQEniSw==}
@@ -3884,6 +3899,12 @@ packages:
     resolution: {integrity: sha512-JhFGDVJ7tmDJItKhYgJCGLOWjuK9vPxiXoUFLwLDc99NlmklilbiQJwoctZtt13+xMw91MCk/REan6MWHqDjyA==}
     engines: {node: '>=12.0.0'}
 
+  express-rate-limit@8.2.1:
+    resolution: {integrity: sha512-PCZEIEIxqwhzw4KF0n7QF4QqruVTcF73O5kFKUnGOyjbCCgizBBiFaYpd/fnBLUMPw/BWw9OsiN7GgrNYr7j6g==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express: '>= 4.11'
+
   express@4.21.2:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
@@ -4303,6 +4324,10 @@ packages:
   ioredis@5.8.2:
     resolution: {integrity: sha512-C6uC+kleiIMmjViJINWk80sOQw5lEzse1ZmvD+S/s8p8CWapftSaC+kocGTx6xrbrJ4WmYQGC08ffHLr6ToR6Q==}
     engines: {node: '>=12.22.0'}
+
+  ip-address@10.0.1:
+    resolution: {integrity: sha512-NWv9YLW4PoW2B7xtzaS3NCot75m6nK7Icdv0o3lfMceJVRfSoQwqD4wEH5rLwoKJwUiZ/rfpiVBhnaF0FK4HoA==}
+    engines: {node: '>= 12'}
 
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
@@ -7717,6 +7742,12 @@ snapshots:
       '@harmoniclabs/obj-utils': 1.0.0
       '@harmoniclabs/uint8array-utils': 1.0.4
 
+  '@harmoniclabs/cbor@1.6.0':
+    dependencies:
+      '@harmoniclabs/bytestring': 1.0.0
+      '@harmoniclabs/obj-utils': 1.0.0
+      '@harmoniclabs/uint8array-utils': 1.0.4
+
   '@harmoniclabs/crypto@0.2.5':
     dependencies:
       '@harmoniclabs/bitstream': 1.0.0
@@ -7734,6 +7765,14 @@ snapshots:
       '@harmoniclabs/crypto': 0.2.5
       '@harmoniclabs/uint8array-utils': 1.0.4
 
+  '@harmoniclabs/plutus-data@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0)':
+    dependencies:
+      '@harmoniclabs/biguint': 1.0.0
+      '@harmoniclabs/bytestring': 1.0.0
+      '@harmoniclabs/cbor': 1.6.0
+      '@harmoniclabs/crypto': 0.2.5
+      '@harmoniclabs/uint8array-utils': 1.0.4
+
   '@harmoniclabs/uint8array-utils@1.0.4': {}
 
   '@harmoniclabs/uplc@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0)(@harmoniclabs/crypto@0.2.5)(@harmoniclabs/pair@1.0.0)(@harmoniclabs/plutus-data@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0))':
@@ -7745,6 +7784,17 @@ snapshots:
       '@harmoniclabs/crypto': 0.2.5
       '@harmoniclabs/pair': 1.0.0
       '@harmoniclabs/plutus-data': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0)
+      '@harmoniclabs/uint8array-utils': 1.0.4
+
+  '@harmoniclabs/uplc@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0)(@harmoniclabs/crypto@0.2.5)(@harmoniclabs/pair@1.0.0)(@harmoniclabs/plutus-data@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0))':
+    dependencies:
+      '@harmoniclabs/bigint-utils': 1.0.0
+      '@harmoniclabs/bitstream': 1.0.0
+      '@harmoniclabs/bytestring': 1.0.0
+      '@harmoniclabs/cbor': 1.6.0
+      '@harmoniclabs/crypto': 0.2.5
+      '@harmoniclabs/pair': 1.0.0
+      '@harmoniclabs/plutus-data': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0)
       '@harmoniclabs/uint8array-utils': 1.0.4
 
   '@humanfs/core@0.19.1': {}
@@ -7969,6 +8019,15 @@ snapshots:
     transitivePeerDependencies:
       - react-native-b4a
 
+  '@meshsdk/common@1.9.0-beta.89':
+    dependencies:
+      bech32: 2.0.0
+      bip39: 3.1.0
+      blake2b: 2.1.4
+      blakejs: 1.2.1
+    transitivePeerDependencies:
+      - react-native-b4a
+
   '@meshsdk/core-cst@1.9.0-beta.53(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/crypto@0.2.5)(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)':
     dependencies:
       '@cardano-sdk/core': 0.45.10(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)
@@ -8036,6 +8095,34 @@ snapshots:
       '@harmoniclabs/plutus-data': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0)
       '@harmoniclabs/uplc': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0)(@harmoniclabs/crypto@0.2.5)(@harmoniclabs/pair@1.0.0)(@harmoniclabs/plutus-data@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.3.0))
       '@meshsdk/common': 1.9.0-beta.87
+      '@types/base32-encoding': 1.0.2
+      base32-encoding: 1.0.0
+      bech32: 2.0.0
+      blakejs: 1.2.1
+      bn.js: 5.2.2
+    transitivePeerDependencies:
+      - '@dcspark/cardano-multiplatform-lib-asmjs'
+      - '@dcspark/cardano-multiplatform-lib-browser'
+      - '@dcspark/cardano-multiplatform-lib-nodejs'
+      - '@harmoniclabs/bytestring'
+      - '@harmoniclabs/crypto'
+      - bufferutil
+      - encoding
+      - react-native-b4a
+      - rxjs
+      - utf-8-validate
+
+  '@meshsdk/core-cst@1.9.0-beta.89(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/crypto@0.2.5)(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)':
+    dependencies:
+      '@cardano-sdk/core': 0.45.10(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)
+      '@cardano-sdk/crypto': 0.2.3
+      '@cardano-sdk/input-selection': 0.13.34(bufferutil@4.0.9)(rxjs@7.8.2)(utf-8-validate@6.0.5)
+      '@cardano-sdk/util': 0.15.7
+      '@harmoniclabs/cbor': 1.6.0
+      '@harmoniclabs/pair': 1.0.0
+      '@harmoniclabs/plutus-data': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0)
+      '@harmoniclabs/uplc': 1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0)(@harmoniclabs/crypto@0.2.5)(@harmoniclabs/pair@1.0.0)(@harmoniclabs/plutus-data@1.2.4(@harmoniclabs/bytestring@1.0.0)(@harmoniclabs/cbor@1.6.0))
+      '@meshsdk/common': 1.9.0-beta.89
       '@types/base32-encoding': 1.0.2
       base32-encoding: 1.0.0
       bech32: 2.0.0
@@ -11293,6 +11380,11 @@ snapshots:
 
   expect-type@1.2.2: {}
 
+  express-rate-limit@8.2.1(express@4.21.2):
+    dependencies:
+      express: 4.21.2
+      ip-address: 10.0.1
+
   express@4.21.2:
     dependencies:
       accepts: 1.3.8
@@ -11810,6 +11902,8 @@ snapshots:
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
+
+  ip-address@10.0.1: {}
 
   ip-address@10.1.0: {}
 

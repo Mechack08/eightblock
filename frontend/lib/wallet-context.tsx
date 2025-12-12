@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { BrowserWallet } from '@meshsdk/core';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 interface WalletContextType {
   connected: boolean;
   connecting: boolean;
@@ -52,13 +54,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Connect to the first available wallet
-      const walletName = installedWallets[0].name;
-      const browserWallet = await BrowserWallet.enable(walletName);
+      const selectedWalletName = installedWallets[0].name;
+      const browserWallet = await BrowserWallet.enable(selectedWalletName);
       const walletAddress = await browserWallet.getChangeAddress();
 
-      // Authenticate with backend to get JWT token
+      // Secure authentication flow with signature verification
       try {
-        const response = await fetch('http://localhost:5000/api/auth/wallet', {
+        // Step 1: Request nonce from backend
+        const nonceResponse = await fetch(`${API_URL}/auth/wallet/nonce`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -66,11 +69,36 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           body: JSON.stringify({ walletAddress }),
         });
 
-        if (!response.ok) {
-          throw new Error('Backend authentication failed');
+        if (!nonceResponse.ok) {
+          const error = await nonceResponse.json();
+          throw new Error(error.error || 'Failed to get authentication challenge');
         }
 
-        const data = await response.json();
+        const { nonce, message } = await nonceResponse.json();
+
+        // Step 2: Sign the nonce with wallet
+        const signedData = await browserWallet.signData(walletAddress, message);
+
+        // Step 3: Send signature to backend for verification
+        const authResponse = await fetch(`${API_URL}/auth/wallet`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            walletAddress,
+            nonce,
+            signature: signedData.signature,
+            key: signedData.key,
+          }),
+        });
+
+        if (!authResponse.ok) {
+          const error = await authResponse.json();
+          throw new Error(error.error || 'Authentication failed');
+        }
+
+        const data = await authResponse.json();
 
         // Store authentication token and user ID
         localStorage.setItem('authToken', data.token);
@@ -79,15 +107,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         console.log('Wallet authenticated successfully:', data.user);
       } catch (authError) {
         console.error('Failed to authenticate with backend:', authError);
-        // Continue with wallet connection even if auth fails
-        // This allows wallet features to work while auth features require login
+        alert(
+          `Authentication failed: ${authError instanceof Error ? authError.message : 'Unknown error'}`
+        );
+        throw authError;
       }
 
       setWallet(browserWallet);
       setAddress(walletAddress);
       setConnected(true);
       localStorage.setItem('walletConnected', 'true');
-      localStorage.setItem('walletName', walletName);
+      localStorage.setItem('walletName', selectedWalletName);
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       setConnected(false);
