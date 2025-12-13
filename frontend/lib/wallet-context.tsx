@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { BrowserWallet } from '@meshsdk/core';
 import { fetcher } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface WalletContextType {
   connected: boolean;
@@ -48,6 +49,38 @@ function clearWalletStorage() {
   localStorage.removeItem('userId');
 }
 
+function getWalletErrorDetails(error: unknown) {
+  const fallback = {
+    title: 'Wallet connection failed',
+    description: 'Please try again in a few seconds.',
+  };
+
+  const message =
+    typeof error === 'string' ? error : error instanceof Error ? error.message : undefined;
+
+  if (!message) {
+    return fallback;
+  }
+
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('user rejected') ||
+    normalized.includes('user declined') ||
+    normalized.includes('reject request') ||
+    normalized.includes('cancel')
+  ) {
+    return {
+      title: 'Connection cancelled',
+      description: 'You dismissed the wallet request. Try again when you are ready.',
+    };
+  }
+
+  return {
+    title: 'Wallet connection failed',
+    description: message,
+  };
+}
+
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -57,6 +90,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [availableWallets, setAvailableWallets] = useState<
     Array<{ name: string; icon: string; version: string }>
   >([]);
+  const { toast } = useToast();
 
   // Get available wallets on mount
   useEffect(() => {
@@ -81,7 +115,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         const installedWallets = BrowserWallet.getInstalledWallets();
 
         if (installedWallets.length === 0) {
-          alert('No Cardano wallet found. Please install a wallet extension (Nami, Eternl, etc.)');
+          toast({
+            title: 'Wallet not found',
+            description: 'Install a Cardano wallet extension like Nami or Eternl, then try again.',
+            variant: 'destructive',
+          });
           setConnecting(false);
           return;
         }
@@ -130,10 +168,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           console.log('Wallet authenticated successfully:', data.user);
         } catch (authError) {
           console.error('Failed to authenticate with backend:', authError);
-          alert(
-            `Authentication failed: ${authError instanceof Error ? authError.message : 'Unknown error'}`
-          );
-          throw authError;
+          const authMessage =
+            authError instanceof Error ? authError.message : 'Unknown authentication error';
+          throw new Error(`Authentication failed: ${authMessage}`);
         }
 
         setWallet(browserWallet);
@@ -143,6 +180,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('walletName', selectedWalletName);
       } catch (error) {
         console.error('Failed to connect wallet:', error);
+        const { title, description } = getWalletErrorDetails(error);
+        toast({ title, description, variant: 'destructive' });
         setConnected(false);
         setAddress(null);
         setWallet(null);
@@ -151,7 +190,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         setConnecting(false);
       }
     },
-    [hydrateWalletSession]
+    [hydrateWalletSession, toast]
   );
 
   const disconnect = useCallback(async () => {
