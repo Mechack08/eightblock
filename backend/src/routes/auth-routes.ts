@@ -1,14 +1,56 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { walletAuth } from '@/controllers/auth-controller';
+import { walletAuth, requestNonce } from '@/controllers/auth-controller';
+import { logout, revokeAllSessions } from '@/controllers/logout-controller';
 import { validateBody } from '@/middleware/validate';
+import { authLimiter, nonceLimiter } from '@/middleware/rate-limit';
+import { requireTrustedOrigin } from '@/middleware/origin-check';
 
 const router = Router();
 
-const walletAuthSchema = z.object({
-  walletAddress: z.string().min(10),
+const requestNonceSchema = z.object({
+  walletAddress: z
+    .string()
+    .min(10)
+    .refine((addr) => addr.startsWith('addr1'), {
+      message: 'Must be a valid Cardano address starting with addr1',
+    }),
 });
 
-router.post('/wallet', validateBody(walletAuthSchema), walletAuth);
+const walletAuthSchema = z.object({
+  walletAddress: z
+    .string()
+    .min(10)
+    .refine((addr) => addr.startsWith('addr1'), {
+      message: 'Must be a valid Cardano address starting with addr1',
+    }),
+  nonce: z.string().min(1, 'Nonce is required'),
+  signature: z.string().min(1, 'Signature is required'),
+  key: z.string().min(1, 'Public key is required'),
+});
+
+// Step 1: Request authentication nonce (rate limited)
+router.post(
+  '/wallet/nonce',
+  requireTrustedOrigin,
+  nonceLimiter,
+  validateBody(requestNonceSchema),
+  requestNonce
+);
+
+// Step 2: Authenticate with signature (strict rate limiting)
+router.post(
+  '/wallet',
+  requireTrustedOrigin,
+  authLimiter,
+  validateBody(walletAuthSchema),
+  walletAuth
+);
+
+// Logout endpoint - revoke current session
+router.post('/logout', logout);
+
+// Revoke all sessions for current user
+router.post('/revoke-all', revokeAllSessions);
 
 export default router;

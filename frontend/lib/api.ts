@@ -1,12 +1,43 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000/api';
 
+const CSRF_COOKIE_NAME = 'csrf_token';
+
+function getBrowserCsrfToken() {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  const match = document.cookie.match(new RegExp(`(?:^|; )${CSRF_COOKIE_NAME}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 export async function fetcher(path: string, init?: RequestInit) {
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) throw new Error('API error');
-  return res.json();
+  try {
+    const headers = new Headers(init?.headers ?? {});
+    headers.set('Content-Type', headers.get('Content-Type') ?? 'application/json');
+
+    const csrfToken = getBrowserCsrfToken();
+    if (csrfToken) {
+      headers.set('X-CSRF-Token', csrfToken);
+    }
+
+    const res = await fetch(`${API_URL}${path}`, {
+      credentials: 'include',
+      headers,
+      ...init,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`API error (${res.status}):`, errorText);
+      throw new Error(`API error: ${res.status} - ${errorText}`);
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
+  }
 }
 
 /**
@@ -47,7 +78,13 @@ export async function getUserByWallet(walletAddress: string) {
 /**
  * Create or update user
  */
-export async function upsertUser(data: { walletAddress: string; name?: string }) {
+export async function upsertUser(data: {
+  walletAddress: string;
+  name?: string;
+  bio?: string;
+  avatarUrl?: string | null;
+  email?: string | null;
+}) {
   return fetcher('/users', {
     method: 'POST',
     body: JSON.stringify(data),
@@ -98,12 +135,11 @@ export async function updateArticle(
  * Delete article
  */
 export async function deleteArticle(id: string) {
-  const token = localStorage.getItem('authToken');
   const res = await fetch(`${API_URL}/articles/${id}`, {
     method: 'DELETE',
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
   });
 
