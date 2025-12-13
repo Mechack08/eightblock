@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   toggleLike,
@@ -10,9 +10,9 @@ import {
   createComment,
   updateComment,
   deleteComment,
-  isBookmarked,
-  addBookmark,
-  removeBookmark,
+  fetchBookmarkIds,
+  createBookmark,
+  deleteBookmark,
   shareArticle,
 } from '@/lib/article-api';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 interface UseArticleInteractionsProps {
   articleId: string;
   userId: string | null;
-  authToken: string | null;
   articleSlug: string;
   isPublished: boolean;
 }
@@ -28,27 +27,67 @@ interface UseArticleInteractionsProps {
 export function useArticleInteractions({
   articleId,
   userId,
-  authToken,
   articleSlug,
   isPublished,
 }: UseArticleInteractionsProps) {
   const queryClient = useQueryClient();
   const toast = useToast?.() || { toast: () => {} };
-  const [bookmarked, setBookmarked] = useState(false);
 
   // Check if user liked the article
   const { data: userLiked = false } = useQuery({
     queryKey: ['article-like', articleId, userId],
     queryFn: () => checkUserLike(articleId, userId!),
-    enabled: !!articleId && !!userId && !!authToken && isPublished,
+    enabled: !!articleId && !!userId && isPublished,
   });
 
-  // Check if article is bookmarked
-  useEffect(() => {
-    if (articleId && isPublished) {
-      setBookmarked(isBookmarked(articleId));
-    }
-  }, [articleId, isPublished]);
+  const { data: bookmarkIds = [] } = useQuery({
+    queryKey: ['bookmark-ids'],
+    queryFn: fetchBookmarkIds,
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+
+  const bookmarked = useMemo(() => bookmarkIds.includes(articleId), [bookmarkIds, articleId]);
+  const bookmarkMutation = useMutation({
+    mutationFn: async (action: 'add' | 'remove') => {
+      if (!userId) throw new Error('Not authenticated');
+      if (action === 'add') {
+        return createBookmark(articleId);
+      }
+      return deleteBookmark(articleId);
+    },
+    onMutate: async (action) => {
+      await queryClient.cancelQueries({ queryKey: ['bookmark-ids'] });
+      const previousIds = queryClient.getQueryData<string[]>(['bookmark-ids']) || [];
+      const nextIds =
+        action === 'add'
+          ? Array.from(new Set([...previousIds, articleId]))
+          : previousIds.filter((id) => id !== articleId);
+      queryClient.setQueryData(['bookmark-ids'], nextIds);
+      return { previousIds };
+    },
+    onSuccess: (_data, action) => {
+      toast.toast?.({
+        title: action === 'add' ? 'Article saved!' : 'Bookmark removed',
+        description:
+          action === 'add' ? 'Added to your bookmarks' : 'Article removed from your saved items',
+      });
+    },
+    onError: (error, _action, context) => {
+      if (context?.previousIds) {
+        queryClient.setQueryData(['bookmark-ids'], context.previousIds);
+      }
+      toast.toast?.({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to update bookmark',
+        variant: 'destructive',
+      });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
+      queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+    },
+  });
 
   // Fetch comments
   const { data: comments = [] } = useQuery({
@@ -60,10 +99,8 @@ export function useArticleInteractions({
   // Like mutation
   const likeMutation = useMutation({
     mutationFn: async () => {
-      if (!userId || !authToken) throw new Error('Not authenticated');
-      return userLiked
-        ? removeLike(articleId, userId, authToken)
-        : toggleLike(articleId, userId, authToken);
+      if (!userId) throw new Error('Not authenticated');
+      return userLiked ? removeLike(articleId, userId) : toggleLike(articleId, userId);
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ['article-like', articleId, userId] });
@@ -101,8 +138,8 @@ export function useArticleInteractions({
   // Comment mutation
   const commentMutation = useMutation({
     mutationFn: async (content: string) => {
-      if (!userId || !authToken) throw new Error('Not authenticated');
-      return createComment(articleId, content, userId, authToken);
+      if (!userId) throw new Error('Not authenticated');
+      return createComment(articleId, content, userId);
     },
     onSuccess: () => {
       // Invalidate article-specific queries
@@ -131,8 +168,8 @@ export function useArticleInteractions({
   // Update comment mutation
   const updateCommentMutation = useMutation({
     mutationFn: async ({ commentId, content }: { commentId: string; content: string }) => {
-      if (!authToken) throw new Error('Not authenticated');
-      return updateComment(articleId, commentId, content, authToken);
+      if (!userId) throw new Error('Not authenticated');
+      return updateComment(articleId, commentId, content);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['article-comments', articleId] });
@@ -153,8 +190,8 @@ export function useArticleInteractions({
   // Delete comment mutation
   const deleteCommentMutation = useMutation({
     mutationFn: async (commentId: string) => {
-      if (!authToken) throw new Error('Not authenticated');
-      return deleteComment(articleId, commentId, authToken);
+      if (!userId) throw new Error('Not authenticated');
+      return deleteComment(articleId, commentId);
     },
     onSuccess: () => {
       // Invalidate article-specific queries
@@ -182,7 +219,7 @@ export function useArticleInteractions({
 
   // Handlers
   const handleLike = () => {
-    if (!userId || !authToken) {
+    if (!userId) {
       toast.toast?.({
         title: 'Authentication required',
         description: 'Please connect your wallet to like this article',
@@ -193,20 +230,17 @@ export function useArticleInteractions({
   };
 
   const handleBookmark = () => {
+    if (!userId) {
+      toast.toast?.({
+        title: 'Authentication required',
+        description: 'Please connect your wallet to save this article',
+      });
+      return;
+    }
     if (bookmarked) {
-      removeBookmark(articleId);
-      setBookmarked(false);
-      toast.toast?.({
-        title: 'Bookmark removed',
-        description: 'Article removed from your saved items',
-      });
+      bookmarkMutation.mutate('remove');
     } else {
-      addBookmark(articleId);
-      setBookmarked(true);
-      toast.toast?.({
-        title: 'Article saved!',
-        description: 'Added to your bookmarks',
-      });
+      bookmarkMutation.mutate('add');
     }
   };
 
